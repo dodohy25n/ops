@@ -37,7 +37,9 @@ def pr_auc(y_true: np.ndarray, scores: np.ndarray) -> float:
     tp = np.cumsum(y)
     precision = tp / np.arange(1, len(y) + 1)
     total = y.sum()
-    return float(np.sum(precision * y) / total) if total else 0.0
+    ends = np.r_[scores[order][1:] != scores[order][:-1], True]
+    recall_increments = np.diff(np.r_[0, tp[ends]])
+    return float(np.sum(precision[ends] * recall_increments) / total) if total else 0.0
 
 
 def evaluate(y_true: np.ndarray, scores: np.ndarray, tau: float) -> dict:
