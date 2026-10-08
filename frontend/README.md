@@ -63,7 +63,7 @@
 프로젝트 최상위 폴더에서 백엔드만 실행하면 화면도 함께 열립니다. 실제 모델로 판정하려면 TensorFlow가 설치된 가상환경과 `backend/serving_app/models/`의 `fraud_v1.keras`·`scaler.pkl`·`thresholds.json`이 필요합니다.
 
 ```bash
-python3.11 -m venv .venv && .venv/bin/pip install -r backend/requirements-dev.txt
+python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
 .venv/bin/uvicorn backend.serving_app.main:app --port 8077
 ```
 

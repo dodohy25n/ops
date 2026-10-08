@@ -10,7 +10,6 @@ import os
 import tempfile
 import unittest
 from datetime import date, timedelta
-from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -25,7 +24,6 @@ from backend.serving_app.monitoring import drift_monitor
 from backend.serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
 from backend.serving_app.schemas import BatchRequest
 from backend.serving_app.train_and_register import register_baseline
-from backend.tests.fixtures import write_test_scaler
 
 CARDS = 50
 DAYS = 119
@@ -74,7 +72,7 @@ class RetrainIntegrationTests(unittest.TestCase):
         self.cache = model_loader._model_cache
         model_loader._model_cache = None
         self.settings = json.loads((PROJECT_ROOT / "serving_app/models/thresholds.json").read_text())
-        self.scaler = write_test_scaler(Path(self.tmp.name) / "scaler.pkl")
+        self.scaler = PROJECT_ROOT / "serving_app/models/scaler.pkl"
 
     def tearDown(self):
         model_loader._model_cache = self.cache
