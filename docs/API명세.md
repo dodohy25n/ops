@@ -49,7 +49,7 @@ GET /health
 | `model.source` | `local` / `mlflow` | 모델 선택 소스 |
 | `model.version` | string 또는 null | 실제로 로드한 모델 버전 |
 | `model.tau` | number 또는 null | 이상거래 판정 기준 |
-| `model.role` | `local_candidate` / `champion` / null | 로컬 후보 또는 게이트 통과 운영 모델 |
+| `model.role` | `local` / `champion` / null | 로컬 파일의 v1 기준 모델 또는 MLflow 운영 모델 |
 | `model.error` | string 또는 null | 마지막 로딩 오류 |
 | `model.missing_files` | string[] | 로컬 모드에서 확인한 누락 파일 |
 | `model.criteria` | object 또는 null | 모델 버전과 함께 저장된 판정 기준. 로컬 모드는 로딩 전에도 `thresholds.json`에서 읽고, MLflow 모드는 로딩 후 bundle의 `settings.json`에서 읽습니다 |
@@ -147,7 +147,7 @@ curl -F 'file=@data/sample_card_transactions.csv' http://localhost:8099/data/upl
   "filename": "sample_card_transactions.csv",
   "created_at": "2026-10-08T01:00:00+00:00",
   "model_version": "v1-local",
-  "model_role": "local_candidate",
+  "model_role": "local",
   "tau": 0.28,
   "input_rows": 50,
   "period_rows": 12,

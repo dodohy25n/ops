@@ -126,7 +126,7 @@ UTF-8(BOM 포함)과 CP949를 지원하며 기본 크기 제한은 128MB입니�
 
 ## 모델 연결
 
-현재 `MODEL_SOURCE=local`은 `serving_app/models/fraud_v1.keras`, `scaler.pkl`, `thresholds.json`을 읽고 결과에 `model_role=local_candidate`를 기록합니다. `MODEL_SOURCE=mlflow`는 게이트를 통과한 `champion`을 읽습니다. 로컬 후보 분석과 운영 승격은 별개입니다.
+`MODEL_SOURCE=local`은 `serving_app/models/fraud_v1.keras`, `scaler.pkl`, `thresholds.json`을 읽고 결과에 `model_role=local`을 기록합니다. `MODEL_SOURCE=mlflow`는 Registry의 운영 모델 `champion`을 읽고 `model_role=champion`을 기록합니다. 현재 `champion`은 v1(버전 1)이며, 이후 게이트를 통과한 v2가 생기면 그 버전으로 바뀝니다.
 
 실제 추론 런타임이 필요한 경우 제공된 `model-runtime` Docker target을 선택하고 모델·스케일러를 준비합니다.
 
