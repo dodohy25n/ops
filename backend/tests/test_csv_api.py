@@ -133,7 +133,7 @@ class CsvApiTests(unittest.TestCase):
         expected, _, _, _ = build_sequences(sort_transactions(pd.DataFrame(rows)), model.scaler)
         np.testing.assert_array_equal(np.concatenate(model.seen), expected)
         self.assertEqual(result["predictions"], 12)
-        self.assertEqual(result["model_role"], "local_candidate")
+        self.assertEqual(result["model_role"], "local")
         self.assertEqual(result["labelled_predictions"], 12)
         self.assertEqual(result["metrics"]["samples"], 12)
         path = "/predict/results/" + result["analysis_id"]

@@ -152,7 +152,7 @@ def model_state():
     model = _model_cache
     source = os.getenv("MODEL_SOURCE", "local")
     if model is not None:
-        role = "local_candidate" if model.version == "v1-local" else "champion"
+        role = "local" if model.version == "v1-local" else "champion"
         return {"state": "loaded", "source": source, "version": model.version,
                 "tau": model.tau, "role": role, "error": _last_load_error,
                 "criteria": criteria_from(getattr(model, "settings", None))}

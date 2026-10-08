@@ -1,4 +1,4 @@
-"""같은 홀드아웃에서 후보와 현재 모델을 비교하는 배포 심사입니다."""
+"""재학습한 후보(v2)를 현재 운영 모델과 같은 홀드아웃에서 비교하는 배포 심사입니다."""
 import numpy as np
 
 from backend.serving_app.monitoring.metrics import evaluate
@@ -20,27 +20,24 @@ def validate_predictions(y, scores, tau):
     return y, scores
 
 
-def check_gate(y, candidate_scores, candidate_tau, policy, *, current_scores=None, current_tau=None):
+def check_gate(y, candidate_scores, candidate_tau, policy, *, current_scores, current_tau):
     y, scores = validate_predictions(y, candidate_scores, candidate_tau)
+    _, current_scores = validate_predictions(y, current_scores, current_tau)
     for key in ("r_min", "alert_cap"):
         if not np.isfinite(policy[key]) or not 0 < policy[key] <= 1:
             raise ValueError(f"{key}는 0보다 크고 1 이하여야 합니다.")
     candidate = evaluate(y, scores, candidate_tau)
-    current = None
-    if current_scores is not None:
-        _, current_scores = validate_predictions(y, current_scores, current_tau)
-        current = evaluate(y, current_scores, current_tau)
+    current = evaluate(y, current_scores, current_tau)
     checks = {
         "enough_samples": len(y) >= MIN_SAMPLES,
         "enough_frauds": int(y.sum()) >= MIN_FRAUDS,
         "has_normal_transactions": bool(np.any(y == 0)),
         "recall": candidate["recall"] >= policy["r_min"],
         "alert_rate": candidate["alert_rate"] <= policy["alert_cap"],
-        "f2_no_regression": current is None or candidate["f2"] >= current["f2"],
+        "f2_no_regression": candidate["f2"] >= current["f2"],
     }
     return {
         "passed": all(checks.values()),
-        "mode": "initial" if current is None else "replacement",
         "checks": checks,
         "failed_checks": [key for key, passed in checks.items() if not passed],
         "candidate": candidate,

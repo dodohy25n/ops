@@ -73,7 +73,7 @@ def analyze_batch(request, prepared, model, started=None):
         "analysis_id": analysis_id, "upload_id": request.upload_id,
         "filename": metadata["filename"], "created_at": timestamp(),
         "model_version": model.version,
-        "model_role": "local_candidate" if model.version == "v1-local" else "champion",
+        "model_role": "local" if model.version == "v1-local" else "champion",
         "tau": model.tau, "input_rows": len(df), "period_rows": int(in_period.sum()),
         "predictions": len(ends), "excluded_rows": int(in_period.sum()) - len(ends),
         "alerts": int(predicted.sum()), "alert_rate": float(predicted.mean()),

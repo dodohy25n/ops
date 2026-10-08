@@ -55,7 +55,7 @@ class ModelState(BaseModel):
     source: Literal["local", "mlflow"]
     version: str | None
     tau: float | None
-    role: Literal["local_candidate", "champion"] | None
+    role: Literal["local", "champion"] | None
     error: str | None
     missing_files: list[str] = Field(default_factory=list)
     criteria: ModelCriteria | None = None

@@ -12,14 +12,20 @@ class GateTests(unittest.TestCase):
         self.scores = np.where(self.y == 1, 0.9, 0.1)
         self.policy = {"r_min": 0.95, "alert_cap": 0.06}
 
-    def gate(self, scores=None, **kwargs):
-        return check_gate(self.y, self.scores if scores is None else scores, 0.5, self.policy, **kwargs)
+    def gate(self, scores=None, current_scores=None, current_tau=0.5):
+        # 기본 운영 모델은 경보를 내지 않아 F2가 0이므로, 절대 기준만 따로 확인할 수 있습니다.
+        current = np.full_like(self.scores, 0.1) if current_scores is None else current_scores
+        return check_gate(self.y, self.scores if scores is None else scores, 0.5, self.policy,
+                          current_scores=current, current_tau=current_tau)
 
-    def test_initial_model_uses_absolute_limits(self):
-        result = self.gate()
+    def test_candidate_equal_to_current_passes(self):
+        result = self.gate(current_scores=self.scores)
         self.assertTrue(result["passed"])
-        self.assertEqual(result["mode"], "initial")
-        self.assertIsNone(result["current"])
+        self.assertEqual(result["current"]["f2"], result["candidate"]["f2"])
+
+    def test_current_model_is_required(self):
+        with self.assertRaises(TypeError):
+            check_gate(self.y, self.scores, 0.5, self.policy)
 
     def test_recall_boundary_and_failure(self):
         scores = self.scores.copy()
@@ -49,9 +55,13 @@ class GateTests(unittest.TestCase):
         self.assertTrue(result["passed"])
 
     def test_insufficient_evaluation_is_not_promoted(self):
-        self.assertIn("enough_samples", check_gate(self.y[:100], self.scores[:100], 0.5, self.policy)["failed_checks"])
+        small = check_gate(self.y[:100], self.scores[:100], 0.5, self.policy,
+                           current_scores=self.scores[:100], current_tau=0.5)
+        self.assertIn("enough_samples", small["failed_checks"])
         y = np.r_[np.ones(19), np.zeros(981)]
-        self.assertIn("enough_frauds", check_gate(y, np.where(y, 0.9, 0.1), 0.5, self.policy)["failed_checks"])
+        scores = np.where(y, 0.9, 0.1)
+        few = check_gate(y, scores, 0.5, self.policy, current_scores=scores, current_tau=0.5)
+        self.assertIn("enough_frauds", few["failed_checks"])
 
     def test_invalid_predictions_fail_closed(self):
         for value in [np.nan, np.inf, -0.1, 1.1]:

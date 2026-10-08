@@ -1,4 +1,4 @@
-"""별도 임시 DB와 합성 시험용 모델로 승격, 실패, 캐시 교체를 검증합니다."""
+"""별도 임시 DB와 합성 시험용 모델로 기준 등록, 후보 실패·승격, 캐시 교체를 검증합니다."""
 import copy
 import json
 import os
@@ -11,7 +11,7 @@ from tensorflow import keras
 
 from backend.serving_app import model_loader
 from backend.serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
-from backend.serving_app.train_and_register import register_candidate
+from backend.serving_app.train_and_register import register_baseline, register_candidate
 
 
 def fixture_model(always_alert=False):
@@ -28,7 +28,7 @@ def fixture_model(always_alert=False):
 
 
 class RegistryIntegrationTests(unittest.TestCase):
-    def test_initial_rejection_replacement_and_cache(self):
+    def test_baseline_rejection_replacement_and_cache(self):
         y = np.r_[np.ones(40), np.zeros(960)]
         X = np.zeros((1000, 20, 17), dtype="float32")
         X[:40, :, 0] = 1
@@ -40,9 +40,13 @@ class RegistryIntegrationTests(unittest.TestCase):
             with tempfile.TemporaryDirectory(prefix="fraud-registry-test-") as tmp, patch.dict(
                 os.environ, {"FRAUD_MLFLOW_DIR": tmp, "MODEL_SOURCE": "mlflow"}
             ):
-                first = register_candidate(fixture_model(), settings, scaler, X, y, evaluation)
+                with self.assertRaises(RuntimeError):
+                    register_candidate(fixture_model(), settings, scaler, X, y, evaluation)
+                first = register_baseline(fixture_model(), settings, scaler, X)
                 self.assertTrue(first["promoted"])
                 self.assertEqual(first["version"], "1")
+                with self.assertRaises(RuntimeError):
+                    register_baseline(fixture_model(), settings, scaler, X)
                 cached = model_loader.reload_model()
                 np.testing.assert_array_equal(cached.classify(X), y)
                 client = configure_registry()
