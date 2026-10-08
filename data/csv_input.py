@@ -64,7 +64,7 @@ def validate_transactions(df: pd.DataFrame):
     fail("승인일자", ~date_ok | parsed.isna(), "YYYYMMDD 형식의 유효한 날짜가 필요합니다.")
     for column, lo, hi, integer, optional in [
         ("통합승인금액", 0, None, False, False),
-        ("카드이용한도금액", 0, None, False, False),
+        ("카드이용한도금액", 0, None, False, True),
         ("승인시간대", 0, 23, True, False),
         ("승인SEQ", 0, None, True, False),
         ("연령", 0, 120, True, True),

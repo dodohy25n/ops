@@ -103,11 +103,12 @@ class CsvApiTests(unittest.TestCase):
         self.assertEqual(self.client.get("/data/uploads").json(), [])
 
     def test_zero_amount_and_limit_match_training_data(self):
-        # 운영 데이터에는 한도 0이 약 20%, 승인금액 0과 전월 매출건수 음수가 일부 있고 학습 전처리는 이를 0 이상으로 자릅니다.
+        # 운영 데이터에는 한도 0이 약 20%, 한도 빈칸·승인금액 0·전월 매출건수 음수가 일부 있고 학습 전처리는 이를 0 이상으로 자릅니다.
         rows = sample_rows()
         rows[0]["통합승인금액"] = "0"
         rows[1]["카드이용한도금액"] = "0"
         rows[2]["전월_매출건수"] = "-1.0"
+        rows[3]["카드이용한도금액"] = ""
         self.assertEqual(self.upload(rows).status_code, 201)
 
     def test_missing_model_returns_503_and_keeps_upload(self):
