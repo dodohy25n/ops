@@ -1,48 +1,67 @@
-# HAIC AIOps 프론트엔드
+# 카드 이상거래 AIOps 대시보드
 
-교수님 AIOps 운영 도구의 화면 구성을 참고하여 만든 프론트엔드입니다.
+교수님 AIOps 운영 도구의 화면 틀을 가져와, 카드 거래 CSV 배치 분석 구조와 우리 설계 지표에 맞게 다시 만든 대시보드입니다. 백엔드가 이 폴더를 서버 루트(`/`)에서 그대로 서비스합니다.
 
 ## 포함 파일
 
-- `index.html`: Dashboard, Simulation, Datasets, System 화면과 API 호출 코드
+- `index.html`: Dashboard, Analysis, Datasets, System 화면과 API 호출 코드
 - `favicon.ico`: 브라우저 아이콘
 
-## 프로젝트에 적용하는 위치
+## 지표 구성
 
-두 파일을 FastAPI 프로젝트의 다음 경로에 넣습니다.
+강의의 모니터링 3대 대상(실행 환경·모델·데이터)에 맞춰 지표를 나눴습니다. 기준값은 화면에 고정하지 않고 `/health`의 `model.criteria`에서 읽습니다. 모델 버전마다 τ와 감시 기준이 다르므로, 모델이 교체되면 화면의 기준도 함께 바뀌어야 하기 때문입니다.
 
-```text
-serving_app/static/
-├── index.html
-└── favicon.ico
-```
+| 대상 | 지표 | 비교 기준 |
+|---|---|---|
+| 실행 환경 | 요청 수, 평균 API 응답시간, 5xx 오류율 (`/metrics/summary`), 최근 배치 처리량 | 없음 (측정값 표시) |
+| 모델 | 최근 분석의 Precision, Recall | 운영 감시 트리거: 정상 창 평균 − 2σ (0.6290 / 0.8632) |
+| 모델 | 최근 분석의 F2, 경보 비율 | τ를 고른 검증 구간의 기준선 (0.9089 / 4.45%) |
+| 데이터 | PSI | 0.1 주의 · 0.25 경고. 아직 CSV 처리와 연결되지 않아 기준만 표시 |
 
-## 프론트에서 사용하는 API
+배포 게이트(Recall ≥ 0.95, 경보 비율 ≤ 6%, F2 회귀 없음, 최소 1,000건·이상거래 20건)는 재학습한 후보 모델을 별도 홀드아웃에서 심사할 때만 쓰는 기준입니다. 그래서 운영 배치 결과와 비교하지 않고 System 탭에 따로 표시합니다.
 
-- `GET /health`: 서버 및 모델 상태
-- `GET /data/status`: 활성 데이터셋 정보
-- `POST /data/upload`: CSV 업로드
-- `POST /predict`: 20일 시퀀스 단건 예측
-- `POST /predict/batch-test`: 정상·드리프트 배치 시뮬레이션
-- `GET /logs`: 로그 파일 목록
-- `GET /logs/{filename}`: 로그 내용
+분석 결과의 트리거 비교는 배치 전체 값으로 계산한 참고값입니다. 실제 재학습 판정은 1,000건 창마다 계산해 2개 창 연속으로 기준에 못 미칠 때 하며, 아직 CSV 처리와 연결되지 않았습니다. 정답이 있는 판정이 1,000건 또는 실제 사기가 20건에 못 미치면 화면에 판정 보류로 표시합니다.
 
-`index.html`은 FastAPI와 같은 주소에서 서비스되는 것을 기준으로 상대 경로 API를 호출합니다. 파일을 더블클릭하여 여는 방식이 아니라 FastAPI 서버를 실행한 뒤 접속해야 합니다.
+## 화면 구성
 
-예시:
+| 탭 | 내용 |
+|---|---|
+| Dashboard | 위 지표, 배치 분석 파이프라인(감시·재학습·게이트 단계는 「미연결」), 분석 이력, 최근 요청 로그, 현재 모델·최근 업로드 |
+| Analysis | 저장된 CSV와 판정 기간을 골라 배치 분석 실행, 결과 요약·품질 지표·감시 기준 비교·거래별 판정 페이지 조회, 결과 CSV 다운로드 |
+| Datasets | 기간별 카드 거래 CSV 업로드, 필수 컬럼 안내, 저장된 CSV 목록 |
+| System | 운영 감시 기준, 배포 게이트, 서버 설정, 로그 파일 조회 |
+
+## 사용하는 API
+
+| 메서드 | 경로 | 용도 |
+|---|---|---|
+| GET | `/health` | 서버·모델 상태, τ, 모델 역할, 판정 기준 |
+| GET | `/metrics/summary` | 요청 수·평균 응답시간·5xx 오류율 |
+| POST | `/data/upload` | CSV 업로드 |
+| GET | `/data/uploads` | 저장된 CSV 목록 |
+| POST | `/predict/batch` | 배치 분석 실행 |
+| GET | `/predict/results` | 분석 이력 |
+| GET | `/predict/results/{id}/transactions` | 거래별 판정 페이지 |
+| GET | `/predict/results/{id}/download` | 결과 CSV 다운로드 |
+| GET | `/logs`, `/logs/{filename}` | 로그 목록·내용 |
+
+요청·응답 형식은 [API 명세](../docs/API명세.md)를 따릅니다.
+
+## 실행
+
+프로젝트 최상위 폴더에서 백엔드만 실행하면 화면도 함께 열립니다. 실제 모델로 판정하려면 TensorFlow가 설치된 가상환경과 `backend/serving_app/models/`의 `fraud_v1.keras`·`scaler.pkl`·`thresholds.json`이 필요합니다.
 
 ```bash
-uvicorn serving_app.main:app --reload --port 8077
+python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
+.venv/bin/uvicorn backend.serving_app.main:app --port 8077
 ```
 
-접속 주소:
+브라우저에서 `http://localhost:8077`에 접속합니다.
 
-```text
-http://127.0.0.1:8077/
-```
+화면만 따로 고칠 때는 `python3 -m http.server 5173 -d frontend`로 띄울 수 있습니다. 5173·3000 포트에서 열면 API 주소를 `http://<호스트>:8077`로 잡고, 그 밖의 주소에서는 같은 주소로 호출합니다. 다른 API 주소는 `?api=http://127.0.0.1:8099`처럼 지정합니다.
 
-## 현재 확인된 범위
+## 확인한 범위 (2026-10-08)
 
-- 탭 이동, 상태 조회, 데이터셋 조회, 로그 조회 정상
-- 단건 예측 `POST /predict` 정상
-- CSV 업로드 및 드리프트 재학습은 백엔드와 MLflow 환경이 준비되어 있어야 전체 실행 가능
+- 실제 모델 `v1-local`(τ 0.28)로 2024년 7월 운영 데이터 일부(카드 660장, 판정 17,488건, 이상거래 551건)를 분석했습니다. Precision 76.60%, Recall 93.28%, F2 0.8939, 경보 비율 3.84%로 두 트리거 기준을 모두 충족했고, 결과 화면·이력·다운로드가 동작했습니다
+- 필수 컬럼 누락 같은 업로드 검증 오류는 서버 메시지 그대로 화면에 표시됩니다
+- 휴대폰 폭(375px)에서 네 탭 모두 가로 넘침이 없습니다
