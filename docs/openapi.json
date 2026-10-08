@@ -442,6 +442,51 @@
         }
       }
     },
+    "/monitoring/status": {
+      "get": {
+        "tags": [
+          "운영 감시"
+        ],
+        "summary": "Status",
+        "operationId": "status_monitoring_status_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/metrics/summary": {
       "get": {
         "tags": [
@@ -740,6 +785,16 @@
           "transactions_per_second": {
             "type": "number",
             "title": "Transactions Per Second"
+          },
+          "monitoring": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonitoringUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1109,6 +1164,114 @@
         ],
         "title": "ModelUnavailableResponse"
       },
+      "MonitoringStatus": {
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "windows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Windows"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "windows",
+          "events"
+        ],
+        "title": "MonitoringStatus"
+      },
+      "MonitoringUpdate": {
+        "properties": {
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "skipped_duplicates": {
+            "type": "integer",
+            "title": "Skipped Duplicates"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "windows_closed": {
+            "items": {
+              "$ref": "#/components/schemas/WindowBrief"
+            },
+            "type": "array",
+            "title": "Windows Closed"
+          },
+          "consecutive": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Consecutive"
+          },
+          "retrain_requested": {
+            "type": "boolean",
+            "title": "Retrain Requested"
+          },
+          "retrain_reason": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Retrain Reason"
+          },
+          "retrain_window": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrain Window"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_version",
+          "added",
+          "skipped_duplicates",
+          "pending",
+          "windows_closed",
+          "consecutive",
+          "retrain_requested",
+          "retrain_reason"
+        ],
+        "title": "MonitoringUpdate",
+        "description": "이번 분석으로 누적된 감시 결과. 창은 판정 거래 1,000건 단위로 닫힙니다."
+      },
       "PredictionPage": {
         "properties": {
           "analysis_id": {
@@ -1462,6 +1625,66 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WindowBrief": {
+        "properties": {
+          "window": {
+            "type": "integer",
+            "title": "Window"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "title": "End"
+          },
+          "precision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision"
+          },
+          "recall": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recall"
+          },
+          "status": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Status"
+          },
+          "psi_level": {
+            "type": "string",
+            "title": "Psi Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window",
+          "start",
+          "end",
+          "precision",
+          "recall",
+          "status",
+          "psi_level"
+        ],
+        "title": "WindowBrief"
       }
     }
   }
