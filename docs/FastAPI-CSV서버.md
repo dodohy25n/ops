@@ -81,7 +81,8 @@ if (!analysisResponse.ok) {
 | GET | `/data/uploads` | 최근 업로드 50개 메타데이터 |
 | GET | `/data/uploads/{upload_id}` | 업로드 한 개의 메타데이터 |
 | GET | `/data/status` | 최신 업로드 상태 |
-| POST | `/predict/batch` | 업로드 CSV에서 시퀀스 생성·배치 추론·결과 저장 |
+| POST | `/predict/batch` | 업로드 CSV에서 시퀀스 생성·배치 추론·결과 저장, 감시 기록 누적, 조건 충족 시 백그라운드 재학습 요청 |
+| GET | `/monitoring/status?limit=20` | 감시 상태(`state`), 최근 판정 창(`windows`), 최근 이벤트(`events`). `limit`은 1~500 |
 | GET | `/predict/results` | 최근 분석 50개 요약 |
 | GET | `/predict/results/{analysis_id}` | 저장된 분석 요약 |
 | GET | `/predict/results/{analysis_id}/transactions` | `offset=0`, `limit=100` 기준 거래별 판정 조회; 최대 1,000건 |
@@ -101,9 +102,34 @@ if (!analysisResponse.ok) {
 
 날짜 필드는 선택 사항이며 생략하면 CSV 전체 기간을 판정합니다. 기간 앞의 CSV 거래도 시퀀스 이력으로 사용하되 기간 밖 거래는 결과·성능 집계에서 제외합니다. 다른 업로드 파일의 이력을 자동으로 합치지는 않습니다.
 
-분석 요약에는 `analysis_id`, `model_version`, `model_role`, `tau`, 입력·기간 내·판정·제외·경보 건수, 경보 비율, 정답이 있는 판정 건수, 성능 지표, 처리시간이 있습니다. 거래 결과에는 CSV 행 번호, 카드 식별자, 승인일자·시간대·SEQ, `fraud_score`, `is_fraud`, 선택 정답 `actual`을 기록합니다.
+분석 요약에는 `analysis_id`, `model_version`, `model_role`, `tau`, 입력·기간 내·판정·제외·경보 건수, 경보 비율, 정답이 있는 판정 건수, 성능 지표, 처리시간, 감시 결과 `monitoring`이 있습니다. 거래 결과에는 CSV 행 번호, 카드 식별자, 승인일자·시간대·SEQ, `fraud_score`, `is_fraud`, 선택 정답 `actual`을 기록합니다.
 
 실패 응답은 422(컬럼·값·기간·이력 부족), 413(파일 크기), 404(알 수 없는 ID), 503(모델 미준비)입니다. 503은 `detail.code = "model_unavailable"`로 구분합니다. 업로드는 모델 없이도 저장되므로 모델 준비 후 같은 ID로 다시 분석할 수 있습니다.
+
+## 운영 감시와 재학습
+
+분석이 끝나면 서버가 판정한 거래를 감시 기록에 이어 붙입니다. 재학습은 응답을 돌려준 뒤 백그라운드에서 실행되므로 분석 응답이 재학습 때문에 늦어지지 않습니다. 기준값과 근거는 [설계 지표](설계지표.md) 5·6절에 있습니다.
+
+| 단계 | 동작 | 코드 |
+|---|---|---|
+| 기록 | 판정 거래를 날짜 → 카드 순으로 `monitoring/observations.csv`에 추가합니다. 같은 카드·날짜·시간대·승인SEQ가 이미 있으면 건너뜁니다 | `batch_service.py`, `monitoring/drift_monitor.py` |
+| 창 | 누적 1,000건마다 창 하나를 닫고 Precision(경보 30건 이상일 때)·Recall(실제 사기 20건 이상일 때)·PSI를 계산합니다. 표본이 부족한 지표는 판정 보류이며 연속 횟수를 바꾸지 않습니다 | `drift_monitor.py` |
+| PSI | 승인 금액·시간대·해외·가맹점 매출 구간·할부·사기 확률 중 하나라도 0.1 이상이면 `psi_warn`, 0.25 이상이면 `psi_alert` 이벤트만 남깁니다 | `drift_monitor.py` |
+| 재학습 요청 | 창을 닫을 때마다 Precision 또는 Recall이 평균 − 2σ 미만으로 2개 창 연속인지 확인하고, 충족하면 그 창에서 요청합니다. 재학습이 요청·실행 중이면 새로 요청하지 않습니다 | `drift_monitor.py`, `routers/predict.py` |
+| 재학습 | 현재 운영 모델이 판정한 정답 있는 최근 40,000건을 시간순 60% · 20% · 20%로 나눠 fine-tune, τ 선택, 게이트 홀드아웃에 씁니다. 한 번에 하나만 실행합니다 | `retrain.py` |
+| 게이트 | `register_candidate()`가 후보와 현재 champion을 홀드아웃에서 비교합니다. 통과하면 champion을 옮기고 서버가 새 모델을 불러오며, 다음 분석에서 판정 창이 처음부터 다시 시작됩니다. 실패하면 현재 모델을 유지하고 연속 횟수를 비웁니다 | `train_and_register.py`, `retrain.py` |
+
+감시 파일은 `FRAUD_API_DIR` 아래 `monitoring/`에 저장합니다(Docker는 `/runtime/monitoring`, 볼륨에 유지).
+
+| 파일 | 내용 |
+|---|---|
+| `state.json` | 현재 운영 모델 버전, 누적 건수, 닫힌 창 수, 지표별 연속 미달 횟수, 재학습 상태 |
+| `observations.csv` | 판정 거래 기록(점수, 경보, 정답, PSI 대상 피처) |
+| `windows.jsonl` | 창별 Precision·Recall·판정 상태·PSI |
+| `events.jsonl` | `psi_warn`, `psi_alert`, `retrain_requested`, `retrain_promoted`, `retrain_rejected`, `retrain_failed`, `window_reset` |
+| `observations-v{버전}.csv`, `windows-v{버전}.jsonl` | 운영 모델이 바뀔 때 보관한 이전 모델의 기록 |
+
+재학습한 후보는 MLflow Registry로만 교체하므로 `MODEL_SOURCE=mlflow`가 필요합니다. `local` 모드에서도 감시 기록은 쌓이지만, 재학습 요청은 `retrain_failed`로 끝납니다. 상태는 `GET /monitoring/status`, 분석 응답의 `monitoring`, 대시보드의 「운영 감시 · 재학습」 카드와 「데이터 분포 (PSI)」 카드에서 확인합니다([프론트 README](../frontend/README.md)).
 
 ## CSV 입력
 
@@ -151,17 +177,21 @@ serving_app/
 ├── schemas.py               업로드·분석·결과 응답 스키마
 ├── model_loader.py          모델·스케일러·τ, Lazy/Eager 로딩
 ├── config.py                파일 경로와 업로드 제한
-├── batch_service.py         CSV 내부 시퀀스 생성·배치 판정·결과 저장
+├── batch_service.py         CSV 내부 시퀀스 생성·배치 판정·결과 저장·감시용 판정 기록
+├── retrain.py               감시가 요청한 fine-tuning → 배포 게이트 → 교체
+├── train_and_register.py    v1 기준 등록, 후보 게이트 심사·조건부 champion 교체
 ├── routers/
 │   ├── data.py              CSV 업로드·데이터 상태
-│   ├── predict.py           분석 실행·결과 조회·다운로드
+│   ├── predict.py           분석 실행·결과 조회·다운로드, 감시 기록과 재학습 요청
+│   ├── monitoring.py        감시 상태 조회
 │   ├── health.py            서버·모델 상태
 │   ├── metrics.py           요청 지표 API
 │   └── logs.py              로그 조회
 ├── monitoring/
 │   ├── logger.py            구조화 요청 로그·지표 수집
-│   ├── metrics.py           모델 품질 지표 계산
-│   └── deployment_gate.py   기존 배포 게이트
+│   ├── metrics.py           모델 품질 지표·PSI 계산
+│   ├── drift_monitor.py     1,000건 판정 창, PSI 알림, 연속 미달과 재학습 요청
+│   └── deployment_gate.py   후보와 운영 모델 비교
 └── Dockerfile, docker-compose.yml
 data/
 ├── csv_input.py             CSV 검증
@@ -169,7 +199,7 @@ data/
 └── storage.py               CSV·메타데이터 저장과 조회
 ```
 
-HAIC 실습의 RMSE 기반 감시·재학습 모듈은 카드 구조와 맞지 않아 삭제했습니다. 카드용 창 감시·재학습은 아직 구현하지 않았습니다. 운영 지표는 프로세스 누적값이고 재시작 시 초기화되며, 요청 로그는 파일로 유지됩니다.
+HAIC 실습의 RMSE 기반 감시·재학습 모듈은 카드 구조와 맞지 않아 삭제하고, 카드 거래용 창 감시·재학습을 새로 만들었습니다(`drift_monitor.py`, `retrain.py`). 감시 기록은 파일로 유지됩니다. 요청 운영 지표는 프로세스 누적값이고 재시작 시 초기화되며, 요청 로그는 파일로 유지됩니다.
 
 ## 환경변수
 
@@ -177,7 +207,7 @@ HAIC 실습의 RMSE 기반 감시·재학습 모듈은 카드 구조와 맞지 �
 |---|---|---|
 | `MODEL_SOURCE` | `mlflow` | `mlflow`는 Registry의 champion, `local`은 v1 파일 직접 읽기 |
 | `LOADING_MODE` | `lazy` | `eager`는 기동 시 로딩 시도. 실패해도 상태·업로드 API 기동 |
-| `FRAUD_API_DIR` | 프로젝트 루트; Docker는 `/runtime` | 업로드·결과·로그 저장 루트 |
+| `FRAUD_API_DIR` | 프로젝트 루트; Docker는 `/runtime` | 업로드·결과·로그·감시 기록(`monitoring/`) 저장 루트 |
 | `FRAUD_MAX_UPLOAD_MB` | `128` | CSV 파일 크기 제한 |
 | `FRAUD_CORS_ORIGINS` | localhost/127.0.0.1의 5173·3000 | 허용할 프론트 주소 |
 | `FRAUD_API_PORT` | `8099` | Compose의 호스트 포트 |
@@ -191,7 +221,7 @@ pip install httpx2==2.13.0
 python -m unittest discover -s backend/tests -t . -v
 ```
 
-테스트 28개(CSV/API 15개, 배포 게이트 9개, PSI 3개, Registry 흐름 1개)가 통과했습니다(커밋 `a1b5631` 이후 실행). API 테스트는 가상 시험 모델로 HTTP 연결, 학습 전처리 일치, 카드·기간 경계, 정답 선택 평가, 결과 저장·페이지 조회·다운로드, 오류, CORS, 캐시, Eager 실패 대응을 확인합니다. 실제 학습 모델의 성능 검증을 뜻하지 않습니다.
+테스트 45개(CSV/API 15개, 배포 게이트 9개, 판정 창 감시·시간 분할 8개, 분석 API 감시 연결·재시작 복구 7개, PSI 3개, 재학습 통합 2개, Registry 흐름 1개)가 통과했습니다. 감시 테스트는 가짜 모델과 임시 폴더로 창 닫기, 판정 보류, 연속 미달 시 요청, 중복 제외, 모델 교체 시 초기화, PSI 알림만 기록을 확인합니다. 재학습 통합 테스트는 합성 모델과 임시 Registry로 `retrain.run`의 통과·미달 경로를 끝까지 확인합니다. 목록은 [검증 결과](results/검증결과.md)에 있습니다. API 테스트는 가상 시험 모델로 HTTP 연결, 학습 전처리 일치, 카드·기간 경계, 정답 선택 평가, 결과 저장·페이지 조회·다운로드, 오류, CORS, 캐시, Eager 실패 대응을 확인합니다. 실제 학습 모델의 성능 검증을 뜻하지 않습니다.
 
 2026-10-08 폴더 구조 변경 후 Docker 구성을 다시 검증했습니다(ARM64).
 
@@ -202,6 +232,39 @@ python -m unittest discover -s backend/tests -t . -v
 | 로컬과 컨테이너 판정 일치 | 운영 구간 카드 300장 CSV, 판정 43,503건에서 점수 최대 차이 0, 판정 전건 일치 |
 | 재시작 | 업로드 기록과 운영 버전 1 유지 |
 
-로컬과 컨테이너는 `backend/requirements-api.txt`의 같은 버전(pandas 3.0.6, numpy 2.4.4, fastapi 0.141.1)을 사용합니다.
+로컬과 컨테이너는 `backend/requirements-api.txt`의 같은 버전(pandas 3.0.6, numpy 2.4.4, fastapi 0.141.1)을 사용합니다. 위 표는 감시·재학습 연결(커밋 `dfabda7`) 이전에 실행했습니다. 연결 이후에는 새 볼륨의 `model-runtime` 컨테이너에서 6개월 시연 전체(감시 → 재학습 → 게이트 → 교체)를 HTTP로 돌렸고, 월별 결과가 [시연 실행 로그](results/시연-실행-로그.txt)와 같았습니다([검증 결과](results/검증결과.md#docker-컨테이너-시연)).
+
+## 6개월 시연 실행
+
+2024년 하반기를 월별 CSV로 나눠 정상 → 명절 → 신종 사기 순서로 서버에 넣습니다. 시나리오와 결과는 [발표자 가이드](발표자-가이드.md) 6절, 실제 출력은 [시연 실행 로그](results/시연-실행-로그.txt)에 있습니다.
+
+### Docker로 한 번에 실행 (권장)
+
+```bash
+bash backend/scripts/demo_docker.sh
+```
+
+`model-runtime` 컨테이너를 새 볼륨으로 띄우고(`down -v` → `up -d --build`), healthy를 기다린 뒤 컨테이너 안의 빈 Registry에 v1을 등록하고, 시나리오 CSV를 확인한 다음 `run_demo.py --api http://127.0.0.1:8099`를 실행합니다. 시나리오 CSV가 없으면 생성 명령(`.venv/bin/python backend/scripts/make_scenarios.py`, `data/processed/ops_rows.csv` 필요)을 안내하고 멈추며, 서버는 켜 둡니다. 컨테이너는 볼륨 안의 Registry만 쓰므로 호스트의 `backend/mlflow.db`·`backend/mlruns`는 바뀌지 않습니다. 처음 실행은 이미지 빌드 때문에 4~5분, 시연 부분은 약 37초 걸립니다. 환경변수 `FRAUD_API_PORT`(기본 8099), `PYTHON`(기본 `python3`)으로 포트와 실행할 파이썬을 바꿀 수 있습니다. 대시보드는 `http://127.0.0.1:8099/`, 정리는 `docker compose -f backend/serving_app/docker-compose.yml down`입니다.
+
+### 로컬에서 실행
+
+```bash
+# 1) 시나리오 CSV 생성 (data/processed/ops_rows.csv 필요 → data/scenarios/2024-07.csv ~ 2024-12.csv)
+python backend/scripts/make_scenarios.py
+
+# 2) 실제 Registry를 건드리지 않도록 빈 저장소를 따로 지정하고 v1을 등록
+export FRAUD_API_DIR=/tmp/fraud-demo FRAUD_MLFLOW_DIR=/tmp/fraud-demo/registry
+python -m backend.serving_app.train_and_register
+
+# 3) 같은 환경변수로 서버 실행
+uvicorn backend.serving_app.main:app --host 127.0.0.1 --port 8077
+
+# 4) 다른 터미널에서 월별 CSV를 순서대로 업로드·분석
+python backend/scripts/run_demo.py --api http://127.0.0.1:8077
+```
+
+`run_demo.py`는 표준 라이브러리만 사용하며, 재학습이 요청되면 `/monitoring/status`로 게이트 결과가 나올 때까지 기다린 뒤 다음 달로 넘어갑니다. 마지막에 월별 요약 표(월, 시나리오, 모델, Recall, F2, 재학습 결과)와 대시보드 주소를 출력합니다. 경로 `/tmp/fraud-demo`는 예시이며 빈 폴더면 됩니다. 같은 폴더를 다시 쓰면 이전 감시 기록과 후보 버전이 남아 결과가 달라집니다.
+
+서버를 시작할 때 감시 상태에 재학습이 「요청됨/실행 중」으로 남아 있으면(재학습 도중 서버가 꺼진 경우) 이를 `failed`(서버 재시작으로 중단)로 바꾸고 `retrain_failed` 이벤트를 남깁니다. 그래야 다음 하락 때 재학습을 다시 요청할 수 있습니다(`drift_monitor.recover_interrupted_retrain()`).
 
 구현 참고: [FastAPI 파일 업로드](https://fastapi.tiangolo.com/tutorial/request-files/), [앱 lifespan](https://fastapi.tiangolo.com/advanced/events/), [HTTP 테스트](https://fastapi.tiangolo.com/tutorial/testing/).

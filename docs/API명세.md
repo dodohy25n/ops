@@ -18,6 +18,7 @@ GET /health
   → GET /predict/results/{analysis_id}
   → GET /predict/results/{analysis_id}/transactions
   → GET /predict/results/{analysis_id}/download
+  → GET /monitoring/status (판정 창·PSI·재학습 상태)
 ```
 
 기본 CORS는 `http://localhost:5173`, `http://127.0.0.1:5173`, `http://localhost:3000`, `http://127.0.0.1:3000`을 허용합니다. 추가 주소는 `FRAUD_CORS_ORIGINS`로 설정합니다. JSON은 `Content-Type: application/json`, 업로드는 multipart를 사용합니다. 날짜 범위 입력은 ISO 날짜(YYYY-MM-DD), CSV·결과의 거래 날짜는 YYYYMMDD입니다.
@@ -160,7 +161,18 @@ curl -F 'file=@data/sample_card_transactions.csv' http://localhost:8099/data/upl
   "start_date": "20240820",
   "end_date": "20240825",
   "duration_seconds": 0.12,
-  "transactions_per_second": 100.0
+  "transactions_per_second": 100.0,
+  "monitoring": {
+    "model_version": "v1-local",
+    "added": 12,
+    "skipped_duplicates": 0,
+    "pending": 12,
+    "windows_closed": [],
+    "consecutive": {"precision": 0, "recall": 0},
+    "retrain_requested": false,
+    "retrain_reason": [],
+    "retrain_window": null
+  }
 }
 ```
 
@@ -180,6 +192,19 @@ curl -F 'file=@data/sample_card_transactions.csv' http://localhost:8099/data/upl
 | `start_date` / `end_date` | string | 적용한 판정 범위 |
 | `duration_seconds` | number | 데이터 준비·모델 로딩·판정·결과 CSV 저장에 걸린 초 |
 | `transactions_per_second` | number | 판정 건수 ÷ 처리시간 |
+| `monitoring` | object 또는 null | 이번 분석으로 누적된 감시 결과. 모델 기준에 감시 설정이 없거나 기록에 실패하면 null이며, 이때도 판정 결과는 정상 반환합니다 |
+
+`monitoring` 구조:
+
+| 필드 | 타입 | 의미 |
+|---|---|---|
+| `model_version` | string | 감시 기록이 속한 운영 모델 버전. 버전이 바뀌면 창을 처음부터 다시 셉니다 |
+| `added` / `skipped_duplicates` | integer | 새로 기록한 판정 거래 수 / 이미 기록돼 건너뛴 수(같은 카드·날짜·시간대·승인SEQ) |
+| `pending` | integer | 아직 1,000건이 차지 않아 다음 창으로 넘어간 수 |
+| `windows_closed` | array | 이번에 닫힌 창: `window`, `start`, `end`, `precision`, `recall`, `status`(`ok` / `below` / `insufficient`), `psi_level`(`ok` / `warn` / `alert`) |
+| `consecutive` | object | 지표별 연속 기준 미달 창 수 |
+| `retrain_requested` | boolean | 이번 분석에서 재학습을 요청했는지. true면 응답 뒤 백그라운드에서 재학습이 실행됩니다 |
+| `retrain_reason` / `retrain_window` | string[] / integer 또는 null | 요청 원인 지표 / 요청한 창 번호 |
 
 정답이 있는 경우 `metrics` 구조:
 
@@ -196,7 +221,7 @@ curl -F 'file=@data/sample_card_transactions.csv' http://localhost:8099/data/upl
 }
 ```
 
-`metrics.alert_rate`는 정답이 있는 판정의 경보 비율이고, 바깥 `alert_rate`는 모든 판정의 경보 비율입니다. 정답이 없으면 `metrics=null`; 실제 사기가 없으면 Recall·F2·PR-AUC가 null; 경보가 없으면 Precision이 null입니다. PR-AUC는 average precision 방식입니다. 이 지표만으로 자동 재학습·승격을 실행하지 않습니다.
+`metrics.alert_rate`는 정답이 있는 판정의 경보 비율이고, 바깥 `alert_rate`는 모든 판정의 경보 비율입니다. 정답이 없으면 `metrics=null`; 실제 사기가 없으면 Recall·F2·PR-AUC가 null; 경보가 없으면 Precision이 null입니다. PR-AUC는 average precision 방식입니다. 이 배치 전체 지표로는 재학습을 판단하지 않습니다. 재학습은 `monitoring`의 1,000건 창 지표가 2개 창 연속 기준 미달일 때만 요청합니다.
 
 오류: 존재하지 않는 업로드 404, ID·기간 형식이나 기간 내 판정 가능한 거래 부족 422, 모델 미준비 503.
 
@@ -274,6 +299,43 @@ HTTP 200, `Content-Type: text/csv`로 전체 판정 CSV를 내려줍니다. 파�
 ```
 
 100KB를 넘는 로그는 마지막 100KB만 반환하고 `truncated=true`입니다. 잘못된 파일명·확장자는 400, 없는 로그는 404입니다.
+
+## 10. GET /monitoring/status
+
+감시 상태와 최근 판정 창·이벤트를 반환합니다. 쿼리 `limit`(기본 20, 1~500)은 `windows`와 `events`에서 최근 몇 개를 돌려줄지 정합니다. 아직 분석 기록이 없으면 `state=null`, 빈 배열입니다.
+
+```json
+{
+  "state": {
+    "model_version": "1",
+    "observations": 80310,
+    "windows": 80,
+    "consecutive": {"precision": 0, "recall": 0},
+    "retrain": {"status": "rejected", "candidate_version": "2", "failed_checks": ["recall"]}
+  },
+  "windows": [
+    {"window": 80, "start": "20240831", "end": "20240831", "precision": 0.77, "recall": 0.95,
+     "status": {"precision": "ok", "recall": "ok"}, "psi_level": "ok", "...": "..."}
+  ],
+  "events": [
+    {"ts": 1791417600.0, "type": "retrain_requested", "reason": ["recall"], "window": 34, "model_version": "1"}
+  ]
+}
+```
+
+위 값은 형식 설명용입니다. `observations`·`windows`·후보 버전·실패 조건은 [시연 실행 로그](results/시연-실행-로그.txt)의 8월 말 상태와 맞췄고, 창의 Precision·Recall 값은 예시입니다.
+
+| 필드 | 의미 |
+|---|---|
+| `state.model_version` | 감시 중인 운영 모델 버전 |
+| `state.observations` / `state.windows` | 누적 판정 거래 수 / 닫힌 창 수 |
+| `state.consecutive` | 지표별 연속 미달 창 수 |
+| `state.retrain.status` | `idle` / `requested` / `running` / `promoted` / `rejected` / `failed` |
+| `state.retrain` 나머지 | 요청 원인·창, 후보 버전과 τ, 구간별 기간·건수(`periods`), 게이트 실패 조건, 후보·운영 모델 지표, 오류 |
+| `windows[]` | 창별 `samples`, `labelled`, `alerts`, `frauds`, `precision`, `recall`, `floors`, `status`, `psi`(대상별 값), `psi_level`, `tau`, `consecutive`, `retrain_requested` |
+| `events[].type` | `psi_warn`, `psi_alert`, `retrain_requested`, `retrain_promoted`, `retrain_rejected`, `retrain_failed`, `window_reset` |
+
+재학습 상태가 `requested`·`running`인 동안에는 새 재학습을 요청하지 않습니다. `rejected`·`failed`가 되면 연속 미달 횟수를 0으로 비웁니다. 재학습 도중 서버가 꺼져 `requested`·`running`이 남아 있으면, 서버가 시작할 때 `failed`(`error`: "서버 재시작으로 중단")로 바꾸고 `retrain_failed` 이벤트(`interrupted`에 이전 상태)를 남깁니다. `promoted`가 되면 다음 분석부터 새 champion으로 판정하고 판정 창을 처음부터 다시 셉니다.
 
 ## 공통 오류 처리
 
