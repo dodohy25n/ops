@@ -180,6 +180,26 @@ def update_retrain(version, **fields):
         save_state(state)
 
 
+def recover_interrupted_retrain():
+    """서버가 재학습 도중 꺼지면 상태가 requested나 running으로 남아 다시는 재학습을 요청하지 않습니다.
+
+    서버를 시작할 때 이 상태를 failed로 바꾸고 이벤트를 남깁니다. 바꾼 이전 상태를 반환합니다.
+    """
+    with _lock:
+        if not (monitor_dir() / "state.json").is_file():
+            return None
+        state = load_state()
+        previous = state["retrain"].get("status")
+        if previous not in {"requested", "running"}:
+            return None
+        error = "서버 재시작으로 중단"
+        append_jsonl("events", {"ts": time.time(), "type": "retrain_failed", "interrupted": previous,
+                                "from_version": state["retrain"].get("from_version", state["model_version"]),
+                                "error": error})
+        update_retrain(state["model_version"], status="failed", finished_at=time.time(), error=error)
+        return previous
+
+
 def summary(limit=20):
     state = load_state()
     return {"state": state, "windows": read_jsonl("windows", limit), "events": read_jsonl("events", limit)}

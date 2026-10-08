@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.serving_app import model_loader
 from backend.serving_app.config import frontend_dir, log_dir, model_source
+from backend.serving_app.monitoring import drift_monitor
 from backend.serving_app.monitoring.logger import RequestMonitor
 from backend.serving_app.routers import predict
 
@@ -25,6 +26,9 @@ def create_app():
         if mode not in {"lazy", "eager"}:
             raise ValueError("LOADING_MODE는 lazy 또는 eager여야 합니다.")
         model_source()
+        interrupted = drift_monitor.recover_interrupted_retrain()
+        if interrupted:
+            logging.getLogger("aiops").warning("재학습이 %s 상태로 중단되어 failed로 바꿨습니다.", interrupted)
         monitor.start(log_dir())
         try:
             if mode == "eager":
