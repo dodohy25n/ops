@@ -158,9 +158,7 @@ serving_app/
 ├── monitoring/
 │   ├── logger.py            구조화 요청 로그·지표 수집
 │   ├── metrics.py           모델 품질 지표 계산
-│   ├── deployment_gate.py   기존 배포 게이트
-│   ├── drift_detector.py    기존 HAIC 코드; 카드 감시 연결 전
-│   └── retrain_trigger.py   기존 HAIC 코드; 카드 재학습 연결 전
+│   └── deployment_gate.py   기존 배포 게이트
 └── Dockerfile, docker-compose.yml
 data/
 ├── csv_input.py             CSV 검증
@@ -168,7 +166,7 @@ data/
 └── storage.py               CSV·메타데이터 저장과 조회
 ```
 
-서버는 HAIC 감시·재학습 모듈을 import하지 않습니다. 자동 재학습은 이번 서버 구축 범위 이후에 연결합니다. 운영 지표는 프로세스 누적값이고 재시작 시 초기화되며, 요청 로그는 파일로 유지됩니다.
+HAIC 실습의 RMSE 기반 감시·재학습 모듈은 카드 구조와 맞지 않아 삭제했습니다. 카드용 창 감시·재학습은 아직 구현하지 않았습니다. 운영 지표는 프로세스 누적값이고 재시작 시 초기화되며, 요청 로그는 파일로 유지됩니다.
 
 ## 환경변수
 

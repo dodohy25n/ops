@@ -1,8 +1,8 @@
 """
 카드 거래를 LSTM 입력용 시퀀스로 바꾸는 공용 모듈입니다.
 
-데이터 준비(scripts/prepare_data.py), 학습(serving_app/train_and_register.py),
-서빙(serving_app/model_loader.py), 재학습(monitoring/retrain_trigger.py)이 모두
+데이터 준비(backend/scripts/prepare_data.py), 학습·등록(backend/scripts/train_baseline_v1.py,
+backend/serving_app/train_and_register.py), 서빙(backend/serving_app/batch_service.py)이 모두
 이 모듈을 거칩니다. 학습할 때와 서빙할 때 입력을 만드는 방식이 조금이라도 다르면
 서버는 정상 응답하면서 틀린 확률을 내놓기 때문에, 변환 규칙을 이 파일 한 곳에만 둡니다.
 
