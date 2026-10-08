@@ -7,9 +7,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from data.gate_holdout import load_gate_holdout
-from serving_app.model_loader import _load_from_local, load_registered_version, load_run_bundle
-from serving_app.monitoring.deployment_gate import check_gate
-from serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
+from backend.serving_app.model_loader import _load_from_local, load_registered_version, load_run_bundle
+from backend.serving_app.monitoring.deployment_gate import check_gate
+from backend.serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
 
 
 def main():

@@ -9,9 +9,9 @@ import numpy as np
 from mlflow.models import infer_signature
 
 from data.features import FEATURES, FraudScaler
-from serving_app.model_loader import LoadedModel, _load_from_local, load_registered_version
-from serving_app.monitoring.deployment_gate import check_gate
-from serving_app.registry import (
+from backend.serving_app.model_loader import LoadedModel, _load_from_local, load_registered_version
+from backend.serving_app.monitoring.deployment_gate import check_gate
+from backend.serving_app.registry import (
     ACTIVE_ALIAS, MODEL_NAME, PROJECT_ROOT, active_version, configure_registry, experiment_id,
 )
 

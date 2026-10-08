@@ -18,7 +18,7 @@ import numpy as np
 from tensorflow import keras
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from serving_app.lstm_model import build_model
+from backend.serving_app.lstm_model import build_model
 
 MODEL_PATH = "serving_app/models/fraud_v1.keras"
 SEED = 42

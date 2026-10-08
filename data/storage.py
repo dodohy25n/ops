@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pandas as pd
 
-from serving_app.config import result_dir, upload_dir
+from backend.serving_app.config import result_dir, upload_dir
 
 
 def timestamp():

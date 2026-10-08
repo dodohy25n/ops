@@ -8,7 +8,7 @@ from threading import RLock
 import numpy as np
 
 from data.features import FEATURES, N_FEATURES, SEQ_LEN, FraudScaler, sequence_from_rows
-from serving_app.config import PROJECT_ROOT
+from backend.serving_app.config import PROJECT_ROOT
 
 _model_cache = None
 _load_lock = RLock()
@@ -64,13 +64,13 @@ def load_run_bundle(client, run_id, model_uri, version):
 
 
 def load_registered_version(client, version):
-    from serving_app.registry import MODEL_NAME
+    from backend.serving_app.registry import MODEL_NAME
 
     return load_run_bundle(client, version.run_id, f"models:/{MODEL_NAME}/{version.version}", version.version)
 
 
 def _load_from_mlflow():
-    from serving_app.registry import active_version, configure_registry
+    from backend.serving_app.registry import active_version, configure_registry
 
     client = configure_registry()
     version = active_version(client)

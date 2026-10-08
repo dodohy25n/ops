@@ -18,7 +18,7 @@ from tensorflow import keras
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from data.features import FEATURES, FraudScaler
-from serving_app.monitoring.metrics import (
+from backend.serving_app.monitoring.metrics import (
     BETA,
     best_threshold,
     evaluate,

@@ -7,8 +7,8 @@ import pandas as pd
 
 from data.features import SEQ_LEN, encode, sort_transactions
 from data.storage import get_upload, load_upload, timestamp, write_json
-from serving_app.config import result_dir
-from serving_app.monitoring.metrics import evaluate
+from backend.serving_app.config import result_dir
+from backend.serving_app.monitoring.metrics import evaluate
 
 INFERENCE_CHUNK = 4096
 

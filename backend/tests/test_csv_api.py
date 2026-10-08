@@ -13,9 +13,9 @@ from fastapi.testclient import TestClient
 
 from data.csv_input import REQUIRED_COLUMNS, parse_csv
 from data.features import FraudScaler, build_sequences, encode, sort_transactions
-from scripts.make_api_sample import sample_rows
-from serving_app import model_loader
-from serving_app.main import create_app
+from backend.scripts.make_api_sample import sample_rows
+from backend.serving_app import model_loader
+from backend.serving_app.main import create_app
 
 
 def csv_bytes(rows, label=False, encoding="utf-8-sig"):

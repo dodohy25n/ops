@@ -3,8 +3,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-from serving_app.config import log_dir
-from serving_app.schemas import ErrorResponse, LogContent, LogFile
+from backend.serving_app.config import log_dir
+from backend.serving_app.schemas import ErrorResponse, LogContent, LogFile
 
 router = APIRouter(prefix="/logs", tags=["로그"])
 

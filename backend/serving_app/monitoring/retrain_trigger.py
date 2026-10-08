@@ -24,7 +24,7 @@
 """
 import logging
 
-from serving_app.monitoring.drift_detector import is_drift
+from backend.serving_app.monitoring.drift_detector import is_drift
 
 # "aiops" 이름의 기록장. main.py 가 이 기록장을 logs/aiops.log 파일에 연결해 두었습니다.
 logger = logging.getLogger("aiops")
@@ -50,7 +50,7 @@ def check_and_trigger(recent_predictions: list[dict]) -> dict:
     #   fine_tune          : Day3 — Production 모델을 "이어받아" 짧게 추가 학습 (warm start)
     from data.features import load_rows, SEQ_LEN
     from data.storage import latest_upload
-    from serving_app.train_and_register import fine_tune
+    from backend.serving_app.train_and_register import fine_tune
 
     logger.info("[INFO] retrain triggered (window=last_21_days)")
 

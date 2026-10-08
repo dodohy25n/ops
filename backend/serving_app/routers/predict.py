@@ -7,10 +7,10 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from data.storage import get_result, list_records, record_path
-from serving_app import model_loader
-from serving_app.batch_service import analyze_batch, prepare_batch
-from serving_app.config import result_dir
-from serving_app.schemas import (
+from backend.serving_app import model_loader
+from backend.serving_app.batch_service import analyze_batch, prepare_batch
+from backend.serving_app.config import result_dir
+from backend.serving_app.schemas import (
     BatchRequest, BatchSummary, ErrorResponse, ModelUnavailableResponse, PredictionPage,
 )
 

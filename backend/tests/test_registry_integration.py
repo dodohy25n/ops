@@ -9,9 +9,9 @@ from unittest.mock import patch
 import numpy as np
 from tensorflow import keras
 
-from serving_app import model_loader
-from serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
-from serving_app.train_and_register import register_candidate
+from backend.serving_app import model_loader
+from backend.serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
+from backend.serving_app.train_and_register import register_candidate
 
 
 def fixture_model(always_alert=False):

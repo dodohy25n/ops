@@ -15,7 +15,7 @@ import numpy as np
 from tensorflow import keras
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from serving_app.monitoring.metrics import f_beta, precision_recall
+from backend.serving_app.monitoring.metrics import f_beta, precision_recall
 
 MODEL_PATH = "serving_app/models/fraud_v1.keras"
 THRESHOLDS_PATH = "serving_app/models/thresholds.json"

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from data.features import FraudScaler, build_sequences, sort_transactions
-from serving_app.registry import PROJECT_ROOT
+from backend.serving_app.registry import PROJECT_ROOT
 
 GATE_START = "20240701"
 GATE_END = "20240731"

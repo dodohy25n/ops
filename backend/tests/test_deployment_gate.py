@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from serving_app.monitoring.deployment_gate import check_gate
-from serving_app.monitoring.metrics import pr_auc
+from backend.serving_app.monitoring.deployment_gate import check_gate
+from backend.serving_app.monitoring.metrics import pr_auc
 
 
 class GateTests(unittest.TestCase):

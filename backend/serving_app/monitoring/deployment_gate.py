@@ -1,7 +1,7 @@
 """같은 홀드아웃에서 후보와 현재 모델을 비교하는 배포 심사입니다."""
 import numpy as np
 
-from serving_app.monitoring.metrics import evaluate
+from backend.serving_app.monitoring.metrics import evaluate
 
 MIN_SAMPLES = 1000
 MIN_FRAUDS = 20

@@ -3,8 +3,8 @@ import os
 
 from fastapi import APIRouter
 
-from serving_app import model_loader
-from serving_app.schemas import HealthResponse
+from backend.serving_app import model_loader
+from backend.serving_app.schemas import HealthResponse
 
 router = APIRouter(tags=["서버 상태"])
 

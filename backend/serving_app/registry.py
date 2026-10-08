@@ -6,7 +6,7 @@ import mlflow
 from mlflow.exceptions import MlflowException
 from mlflow.tracking import MlflowClient
 
-from serving_app.config import PROJECT_ROOT
+from backend.serving_app.config import PROJECT_ROOT
 
 MODEL_NAME = "CardFraudLSTM"
 ACTIVE_ALIAS = "champion"

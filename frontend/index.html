@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AIOps · HAIC 운영 대시보드</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #fff; --line: #e5e9f2; --line-strong: #d8deea;
+    --text: #182033; --muted: #6f7890; --faint: #9ca5b8; --blue: #3264e8;
+    --blue-soft: #edf2ff; --green: #16a765; --green-soft: #eaf8f1;
+    --orange: #e48a18; --orange-soft: #fff5e5; --red: #e14e5a; --red-soft: #fff0f1;
+    --shadow: 0 8px 24px rgba(38,54,93,.06);
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Pretendard,"Noto Sans KR",sans-serif;
+    --mono: "SFMono-Regular",Consolas,Menlo,monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+  button,input { font: inherit; } button { cursor: pointer; }
+  .topbar { height:70px; padding:0 26px; display:flex; align-items:center; gap:28px; background:rgba(255,255,255,.96); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; backdrop-filter:blur(12px); }
+  .brand { display:flex; align-items:center; gap:11px; min-width:245px; }
+  .brand-mark { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; color:white; background:linear-gradient(145deg,#4b79f4,#2757d7); box-shadow:0 6px 14px rgba(50,100,232,.25); }
+  .brand-title { font-size:16px; font-weight:800; letter-spacing:-.02em; }
+  .brand-sub { margin-top:2px; color:var(--muted); font-size:11px; }
+  .nav { align-self:stretch; display:flex; align-items:stretch; gap:12px; }
+  .nav-btn { position:relative; border:0; background:transparent; color:var(--muted); padding:0 12px; font-weight:700; font-size:13px; }
+  .nav-btn.active { color:var(--blue); }
+  .nav-btn.active::after { content:""; position:absolute; left:9px; right:9px; bottom:0; height:3px; background:var(--blue); border-radius:3px 3px 0 0; }
+  .top-meta { margin-left:auto; display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; }
+  .page { max-width:1280px; margin:0 auto; padding:24px; }
+  .tab-panel { display:none; } .tab-panel.active { display:block; animation:fade .18s ease-out; }
+  @keyframes fade { from { opacity:.45; transform:translateY(3px); } }
+  .page-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
+  .page-heading h1 { margin:0; font-size:23px; letter-spacing:-.035em; }
+  .page-heading p { margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.55; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:15px; box-shadow:var(--shadow); }
+  .card-pad { padding:20px; }
+  .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; }
+  .card-head h2 { margin:0; font-size:15px; letter-spacing:-.02em; }
+  .card-head p { margin:5px 0 0; color:var(--muted); font-size:12px; line-height:1.55; }
+  .grid-main { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; }
+  .grid-main > *, .split > * { min-width:0; }
+  .stack { display:grid; gap:16px; min-width:0; }
+  .stack > *, .card { min-width:0; }
+  .metric-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+  .metric { min-height:138px; padding:17px; position:relative; overflow:hidden; }
+  .metric-label { color:var(--muted); font-size:12px; font-weight:700; }
+  .metric-value { margin-top:9px; font-size:25px; font-weight:850; letter-spacing:-.04em; }
+  .metric-foot { position:absolute; left:17px; bottom:14px; color:var(--faint); font-size:11px; }
+  .spark { position:absolute; right:12px; bottom:28px; width:76px; height:34px; opacity:.95; }
+  .spark polyline { fill:none; stroke:var(--blue); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .metric.warn .spark polyline { stroke:var(--red); }
+  .badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:750; white-space:nowrap; }
+  .badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .badge.ok { color:var(--green); background:var(--green-soft); } .badge.warn { color:var(--orange); background:var(--orange-soft); }
+  .badge.err { color:var(--red); background:var(--red-soft); } .badge.neutral { color:var(--muted); background:#f0f2f7; }
+  .badge.blue { color:var(--blue); background:var(--blue-soft); }
+  .pipeline { display:grid; grid-template-columns:repeat(7,minmax(92px,1fr)); align-items:start; gap:0; overflow-x:auto; padding:10px 2px 4px; }
+  .stage { min-width:92px; text-align:center; position:relative; padding:0 5px; }
+  .stage:not(:last-child)::after { content:""; position:absolute; height:2px; background:var(--line-strong); left:calc(50% + 24px); right:calc(-50% + 24px); top:23px; }
+  .stage.done:not(:last-child)::after { background:#9ddbbd; } .stage.alert:not(:last-child)::after { background:#f3ca8a; }
+  .stage-icon { width:46px; height:46px; margin:0 auto 9px; border-radius:50%; border:2px solid var(--line-strong); background:white; display:grid; place-items:center; color:var(--faint); font-size:18px; position:relative; z-index:1; }
+  .stage.done .stage-icon { border-color:#70cf9f; color:var(--green); background:var(--green-soft); }
+  .stage.alert .stage-icon { border-color:#f0b65a; color:var(--orange); background:var(--orange-soft); }
+  .stage-title { font-size:11px; font-weight:800; } .stage-desc { color:var(--muted); font-size:10px; margin-top:3px; }
+  .stage-status { color:var(--faint); font-size:10px; font-weight:750; margin-top:6px; }
+  .stage.done .stage-status { color:var(--green); } .stage.alert .stage-status { color:var(--orange); }
+  .model-name { margin:2px 0 3px; font-size:18px; font-weight:850; }
+  .kv { display:grid; grid-template-columns:88px 1fr; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:12px; }
+  .kv:last-child { border-bottom:0; } .kv span:first-child { color:var(--muted); } .kv span:last-child { font-weight:750; text-align:right; overflow-wrap:anywhere; }
+  .notice { border-left:3px solid var(--blue); background:var(--blue-soft); color:#38517f; border-radius:8px; padding:11px 12px; font-size:11px; line-height:1.6; }
+  .btn { border:0; border-radius:9px; padding:10px 14px; font-weight:750; font-size:12px; transition:.15s ease; }
+  .btn:hover { transform:translateY(-1px); } .btn.primary { background:var(--blue); color:white; box-shadow:0 5px 12px rgba(50,100,232,.2); }
+  .btn.secondary { background:#f0f3f8; color:var(--text); border:1px solid var(--line); } .btn.danger { background:var(--red); color:white; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; } .btn-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .field { padding:10px 12px; border:1px solid var(--line-strong); border-radius:9px; background:white; color:var(--muted); font-size:12px; max-width:100%; }
+  textarea.field { width:100%; min-height:310px; resize:vertical; color:var(--text); font:11px/1.55 var(--mono); }
+  .range-toolbar { display:flex; gap:5px; flex-wrap:wrap; }
+  .range-btn { border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:8px; padding:7px 9px; font-size:10px; font-weight:750; }
+  .range-btn.active { background:var(--blue); border-color:var(--blue); color:white; }
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .result { display:none; margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:10px; background:#f8f9fc; font:11px/1.55 var(--mono); white-space:pre-wrap; overflow:auto; max-height:300px; }
+  .result.show { display:block; } .result.error { border-color:#f2b4ba; background:var(--red-soft); } .log-view { min-height:260px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; } th { color:var(--muted); text-align:left; font-size:10px; letter-spacing:.04em; text-transform:uppercase; padding:10px; border-bottom:1px solid var(--line); }
+  td { padding:12px 10px; border-bottom:1px solid var(--line); } tr:last-child td { border-bottom:0; }
+  .empty { padding:25px 10px; color:var(--faint); text-align:center; font-size:12px; }
+  code { font:11px var(--mono); background:#f0f2f7; padding:2px 5px; border-radius:4px; }
+  footer { color:var(--faint); text-align:center; font-size:11px; padding:24px; }
+  @media (max-width:980px) {
+    .topbar { height:auto; min-height:70px; flex-wrap:wrap; padding:14px 18px 0; gap:8px; } .brand { min-width:0; } .top-meta { margin-left:auto; }
+    .nav { order:3; width:100%; height:42px; overflow-x:auto; } .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .metric-grid .metric:last-child { grid-column:1/-1; } .grid-main,.split { grid-template-columns:1fr; }
+  }
+  @media (max-width:560px) { .page { padding:15px; } .top-meta .clock { display:none; } .metric-grid { grid-template-columns:1fr; } .metric-grid .metric:last-child { grid-column:auto; } .page-heading { display:block; } .page-heading .btn { margin-top:12px; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="brand-mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-10 2 3h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="brand-title">AIOps</div><div class="brand-sub">HAIC ML Pipeline for Reliable Service</div></div></div>
+  <nav class="nav" aria-label="대시보드 메뉴">
+    <button class="nav-btn active" data-tab="dashboard" onclick="openTab('dashboard')">Dashboard</button>
+    <button class="nav-btn" data-tab="simulation" onclick="openTab('simulation')">Simulation</button>
+    <button class="nav-btn" data-tab="datasets" onclick="openTab('datasets')">Datasets</button>
+    <button class="nav-btn" data-tab="system" onclick="openTab('system')">System</button>
+  </nav>
+  <div class="top-meta"><span class="clock" id="clock">-</span><span class="badge blue" id="model-source">MODEL_SOURCE 확인 중</span><span class="badge neutral" id="top-health">연결 확인 중</span></div>
+</header>
+
+<main class="page">
+  <section class="tab-panel active" id="tab-dashboard">
+    <div class="page-heading"><div><h1>운영 대시보드</h1><p>FastAPI 서버의 상태와 드리프트 감지·재학습 흐름을 한 화면에서 확인합니다.</p></div><button class="btn secondary" onclick="refreshAll()">새로고침</button></div>
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="card-head"><div><h2>운영 지표 요약</h2><p>현재 브라우저 세션에서 대시보드가 호출한 API를 선택한 시간 범위로 계산합니다.</p></div><div class="range-toolbar"><button class="range-btn active" onclick="setMetricWindow(5,this)">5분</button><button class="range-btn" onclick="setMetricWindow(60,this)">1시간</button><button class="range-btn" onclick="setMetricWindow(360,this)">6시간</button><button class="range-btn" onclick="setMetricWindow(1440,this)">24시간</button></div></div>
+      <div class="metric-grid">
+        <article class="card metric"><div class="metric-label">요청 수 (Requests)</div><div class="metric-value" id="metric-requests">0</div><svg class="spark" viewBox="0 0 76 34"><polyline points="1,27 11,20 21,23 31,11 41,19 51,14 61,18 75,8"/></svg><div class="metric-foot">현재 브라우저 세션</div></article>
+        <article class="card metric"><div class="metric-label">평균 응답시간 (Latency)</div><div class="metric-value" id="metric-latency">-</div><svg class="spark" viewBox="0 0 76 34"><polyline points="1,22 11,17 21,26 31,14 41,19 51,7 61,21 75,16"/></svg><div class="metric-foot">최근 API 요청 평균</div></article>
+        <article class="card metric"><div class="metric-label">성공률 (Success Rate)</div><div class="metric-value" id="metric-success">-</div><svg class="spark" viewBox="0 0 76 34"><polyline points="1,13 11,13 21,13 31,13 41,13 51,13 61,13 75,13"/></svg><div class="metric-foot">HTTP 성공 응답 기준</div></article>
+        <article class="card metric"><div class="metric-label">최근 성능 (RMSE)</div><div class="metric-value" id="metric-rmse">-</div><svg class="spark" viewBox="0 0 76 34"><polyline points="1,24 11,8 21,26 31,11 41,23 51,9 61,25 75,14"/></svg><div class="metric-foot">배치 실행 후 표시</div></article>
+        <article class="card metric warn"><div class="metric-label">드리프트 임계치</div><div class="metric-value">$4.00</div><svg class="spark" viewBox="0 0 76 34"><polyline points="1,29 14,26 27,22 40,17 53,12 66,8 75,5"/></svg><div class="metric-foot">RMSE 초과 시 재학습</div></article>
+      </div>
+    </div>
+    <div class="grid-main">
+      <div class="stack">
+        <div class="card card-pad"><div class="card-head"><div><h2>드리프트 감지 기반 재학습 파이프라인</h2><p>시뮬레이션 탭에서 배치를 실행하면 실제 처리 결과가 단계별로 표시됩니다.</p></div><span class="badge neutral" id="run-badge">마지막 실행 없음</span></div><div class="pipeline" id="pipeline"></div></div>
+        <div class="card card-pad"><div class="card-head"><div><h2>재학습 이력</h2><p><code>aiops.log</code>에서 Production 승격 기록을 추출해 보여줍니다.</p></div></div><div style="overflow:auto;"><table><thead><tr><th>버전</th><th>등록 시각</th><th>모드</th><th>RMSE</th><th>스테이지</th></tr></thead><tbody id="history-table"><tr><td colspan="5" class="empty">승격 이력이 없습니다.</td></tr></tbody></table></div></div>
+        <div class="card card-pad"><div class="card-head"><div><h2>최근 알림</h2><p><code>logs/aiops.log</code>의 마지막 기록을 보여줍니다.</p></div><button class="btn secondary" onclick="loadLogs()">로그 갱신</button></div><div id="recent-alerts" class="empty">아직 확인된 로그가 없습니다.</div></div>
+      </div>
+      <aside class="stack">
+        <div class="card card-pad"><div class="card-head"><div><h2>현재 운영 모델</h2></div><span class="badge neutral" id="model-health">확인 중</span></div><div class="model-name">HAIC_Predictor <small id="model-version" style="color:var(--muted);">-</small></div><div style="color:var(--muted);font-size:11px;margin-bottom:8px;">다음 거래일 종가 예측 LSTM</div><div class="kv"><span>모델 상태</span><span id="model-loaded">-</span></div><div class="kv"><span>모델 소스</span><span id="model-source-card">-</span></div><div class="kv"><span>로딩 방식</span><span id="loading-mode">-</span></div><div class="kv"><span>최근 RMSE</span><span id="model-rmse">-</span></div><div class="kv"><span>게이트</span><span>RMSE ≤ $4.00</span></div></div>
+        <div class="card card-pad"><div class="card-head"><div><h2>현재 데이터</h2></div><span class="badge neutral" id="data-health">확인 중</span></div><div class="kv"><span>파일</span><span id="data-file">-</span></div><div class="kv"><span>행 수</span><span id="data-rows">-</span></div><div class="kv"><span>기간</span><span id="data-range">-</span></div><button class="btn secondary" style="margin-top:12px;width:100%;" onclick="openTab('datasets')">데이터 관리</button></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="tab-panel" id="tab-simulation">
+    <div class="page-heading"><div><h1>시뮬레이션</h1><p>Day1의 단일 종가 예측과 Day3의 드리프트 감지·재학습 흐름을 직접 실행합니다.</p></div></div>
+    <div class="card card-pad" style="margin-bottom:16px;">
+      <div class="card-head"><div><h2>Day1 — 다음날 종가 예측</h2><p>최근 20거래일의 <code>close</code>와 <code>volume</code>을 JSON으로 보내 <code>/predict</code>를 호출합니다.</p></div><span class="badge blue">20일 시퀀스</span></div>
+      <textarea class="field" id="predict-input" spellcheck="false"></textarea>
+      <div class="btn-row" style="margin-top:10px;"><button class="btn secondary" onclick="generatePredictExample()">예시 데이터 다시 생성</button><button class="btn primary" id="predict-btn" onclick="runPrediction()">예측 실행</button><span class="badge neutral" id="predict-status">대기 중</span></div>
+      <div id="predict-result" class="result"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-head"><div><h2>Day3 — 드리프트 시뮬레이션</h2><p>41개 종가를 생성해 슬라이딩 윈도우로 21번 예측하고 RMSE가 임계치를 넘으면 fine-tuning을 실행합니다.</p></div></div>
+    <div class="split">
+      <div class="card card-pad"><div class="card-head"><div><h2>정상 데이터</h2><p>낮은 변동성의 랜덤워크를 전송합니다.</p></div><span class="badge ok">σ = 0.012</span></div><button class="btn primary" id="normal-btn" onclick="sendBatch('normal')">정상 배치 전송</button></div>
+      <div class="card card-pad"><div class="card-head"><div><h2>드리프트 데이터</h2><p>변동성을 3배로 높여 전송합니다.</p></div><span class="badge warn">σ = 0.036</span></div><button class="btn danger" id="drift-btn" onclick="sendBatch('drift')">드리프트 배치 전송</button></div>
+    </div>
+    <div style="margin-top:16px;"><div class="card-head"><div><h2>실행 결과</h2><p>fine-tuning이 시작되면 응답까지 수십 초가 걸릴 수 있습니다.</p></div><span class="badge neutral" id="simulation-status">대기 중</span></div><div id="simulation-summary" class="empty">위 버튼 중 하나를 눌러 시뮬레이션을 시작하세요.</div><div id="simulation-result" class="result"></div></div>
+    </div>
+  </section>
+
+  <section class="tab-panel" id="tab-datasets">
+    <div class="page-heading"><div><h1>데이터셋 관리</h1><p>학습과 재학습에 사용할 HAIC CSV를 업로드하고 현재 데이터 범위를 확인합니다.</p></div></div>
+    <div class="split">
+      <div class="card card-pad"><div class="card-head"><div><h2>CSV 업로드</h2><p><code>Date</code>, <code>Close</code>, <code>Volume</code> 컬럼과 최소 41행이 필요합니다.</p></div></div><div class="btn-row"><input class="field" type="file" id="upload-input" accept=".csv" /><button class="btn primary" onclick="uploadFile()">업로드</button></div><div id="upload-status" style="margin-top:14px;"></div></div>
+      <div class="card card-pad"><div class="card-head"><div><h2>활성 데이터셋</h2><p>가장 최근에 업로드한 파일이 학습에 사용됩니다.</p></div><span class="badge neutral" id="dataset-badge">확인 중</span></div><table><tbody id="dataset-table"><tr><td class="empty">불러오는 중…</td></tr></tbody></table></div>
+    </div>
+    <div class="card card-pad" style="margin-top:16px;"><div class="card-head"><div><h2>참조 데이터</h2><p>이 실습의 HAIC 데이터는 가상의 종가·거래량 시계열입니다.</p></div></div><div class="notice">학습 데이터의 가격 수준은 가상이므로 실제 투자 판단에 사용할 수 없습니다. 이 화면의 목적은 시계열 모델 서빙, 성능 게이트, 드리프트 감지와 자동 재학습 과정을 학습하는 것입니다.</div></div>
+  </section>
+
+  <section class="tab-panel" id="tab-system">
+    <div class="page-heading"><div><h1>시스템</h1><p>서버 상태와 AIOps 로그를 확인합니다.</p></div><button class="btn secondary" onclick="refreshAll()">전체 갱신</button></div>
+    <div class="split">
+      <div class="card card-pad"><div class="card-head"><div><h2>시스템 설정</h2><p>서버가 실제로 사용 중인 환경변수와 코드 상수입니다.</p></div><span class="badge neutral" id="system-health">확인 중</span></div><div class="kv"><span>SEQ_LEN</span><span>20</span></div><div class="kv"><span>RMSE 게이트</span><span>$4.00</span></div><div class="kv"><span>드리프트 윈도우</span><span>21</span></div><div class="kv"><span>BASE EPOCHS</span><span>100</span></div><div class="kv"><span>FINE-TUNE EPOCHS</span><span>10</span></div><div class="kv"><span>FINE-TUNE LR</span><span>0.0001</span></div><div class="kv"><span>MODEL_SOURCE</span><span id="system-model-source">-</span></div><div class="kv"><span>LOADING_MODE</span><span id="system-loading-mode">-</span></div><div class="notice" style="margin-top:15px;">실습에서는 요청 처리 중 재학습하고 상태·아티팩트·로그를 로컬에 둡니다. 실무에서는 작업 오케스트레이터, 공유 상태 저장소, 객체 스토리지, 중앙 로그 시스템을 사용합니다.</div></div>
+      <div class="card card-pad"><div class="card-head"><div><h2>로그 파일</h2><p>파일을 선택하면 아래에서 내용을 확인할 수 있습니다.</p></div></div><div class="btn-row" id="log-files"></div><div id="log-content" class="result log-view"></div></div>
+    </div>
+  </section>
+</main>
+<footer>HAIC AIOps 실습 대시보드 · FastAPI + MLflow + Drift Detection</footer>
+
+<script>
+const SEQ_LEN=20, WINDOW_SIZE=21, RMSE_THRESHOLD=4.0, NORMAL_SIGMA=.012, DRIFT_SIGMA=.036, DEFAULT_BASE_PRICE=165;
+const stats={events:[]}; let metricWindow=5, lastPipelineRun=null;
+const stages=[{title:"데이터 수집",desc:"요청 수신",icon:"↧"},{title:"데이터 모니터링",desc:"예측 기록 누적",icon:"▥"},{title:"드리프트 감지",desc:"RMSE 비교",icon:"⌕"},{title:"재학습 트리거",desc:"조건 충족",icon:"⚙"},{title:"모델 학습",desc:"fine-tuning",icon:"◆"},{title:"모델 등록",desc:"Registry",icon:"▣"},{title:"배포",desc:"Production",icon:"☁"}];
+
+function openTab(name){document.querySelectorAll(".tab-panel").forEach(e=>e.classList.toggle("active",e.id===`tab-${name}`));document.querySelectorAll(".nav-btn").forEach(e=>e.classList.toggle("active",e.dataset.tab===name));if(name==="system")loadLogs();if(name==="datasets")loadDataStatus();}
+function updateClock(){document.getElementById("clock").textContent=new Intl.DateTimeFormat("ko-KR",{dateStyle:"medium",timeStyle:"medium"}).format(new Date());}setInterval(updateClock,1000);updateClock();
+function updateMetrics(){const cutoff=Date.now()-metricWindow*60000,events=stats.events.filter(e=>e.ts>=cutoff),successes=events.filter(e=>e.ok).length,latency=events.reduce((s,e)=>s+e.ms,0);document.getElementById("metric-requests").textContent=events.length.toLocaleString();document.getElementById("metric-latency").textContent=events.length?`${Math.round(latency/events.length)} ms`:"-";document.getElementById("metric-success").textContent=events.length?`${(successes/events.length*100).toFixed(1)}%`:"-";}
+function setMetricWindow(minutes,button){metricWindow=minutes;document.querySelectorAll(".range-btn").forEach(b=>b.classList.remove("active"));button.classList.add("active");updateMetrics();}
+async function safeJson(res){const text=await res.text();try{return JSON.parse(text)}catch{return{__raw:text||"(응답 없음)"}}}
+async function api(path,options={}){const started=performance.now();let res;try{res=await fetch(path,options);return{ok:res.ok,status:res.status,data:await safeJson(res)}}finally{stats.events.push({ts:Date.now(),ms:performance.now()-started,ok:Boolean(res&&res.ok)});updateMetrics();}}
+function setBadge(el,type,text){el.className=`badge ${type}`;el.textContent=text;}
+function showResult(el,data,error=false){el.className=`result show${error?" error":""}`;el.textContent=typeof data==="string"?data:JSON.stringify(data,null,2);}
+function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
+
+async function loadHealth(){const top=document.getElementById("top-health"),model=document.getElementById("model-health"),sys=document.getElementById("system-health");try{const{ok,data}=await api("/health");if(!ok)throw Error();setBadge(top,"ok","Server Healthy");setBadge(model,"ok","Healthy");setBadge(sys,"ok","연결됨");document.getElementById("model-loaded").textContent=data.model_loaded?"메모리에 로드됨":"첫 요청 대기 중";document.getElementById("model-version").textContent=data.model_version||"-";document.getElementById("model-source").textContent=`MODEL_SOURCE=${data.model_source||"local"}`;document.getElementById("model-source-card").textContent=data.model_source||"local";document.getElementById("loading-mode").textContent=data.loading_mode||"-";document.getElementById("system-model-source").textContent=data.model_source||"local";document.getElementById("system-loading-mode").textContent=data.loading_mode||"-";}catch{setBadge(top,"err","Server Offline");setBadge(model,"err","Offline");setBadge(sys,"err","연결 실패");}}
+async function loadDataStatus(){const badge=document.getElementById("data-health"),db=document.getElementById("dataset-badge"),table=document.getElementById("dataset-table");try{const{ok,data}=await api("/data/status");if(!ok||!data.exists){setBadge(badge,"warn","데이터 없음");setBadge(db,"warn","업로드 필요");document.getElementById("data-file").textContent="-";document.getElementById("data-rows").textContent="-";document.getElementById("data-range").textContent="-";table.innerHTML='<tr><td class="empty">아직 업로드한 CSV가 없습니다.</td></tr>';return;}setBadge(badge,"ok","준비됨");setBadge(db,"ok","활성");document.getElementById("data-file").textContent=data.filename;document.getElementById("data-rows").textContent=`${data.rows}행`;document.getElementById("data-range").textContent=`${data.start_date} ~ ${data.end_date}`;table.innerHTML=`<tr><th>항목</th><th>값</th></tr><tr><td>파일명</td><td>${escapeHtml(data.filename)}</td></tr><tr><td>데이터 행 수</td><td>${data.rows.toLocaleString()}행</td></tr><tr><td>시작일</td><td>${escapeHtml(data.start_date)}</td></tr><tr><td>종료일</td><td>${escapeHtml(data.end_date)}</td></tr><tr><td>최저 종가</td><td>$${Number(data.min_close).toFixed(2)}</td></tr><tr><td>최고 종가</td><td>$${Number(data.max_close).toFixed(2)}</td></tr><tr><td>평균 거래량</td><td>${Math.round(Number(data.avg_volume||0)).toLocaleString()}</td></tr>`;}catch{setBadge(badge,"err","확인 실패");setBadge(db,"err","오류");table.innerHTML='<tr><td class="empty">데이터 상태를 불러오지 못했습니다.</td></tr>';}}
+async function uploadFile(){const input=document.getElementById("upload-input"),status=document.getElementById("upload-status");if(!input.files.length){status.innerHTML='<span class="badge warn">CSV를 먼저 선택하세요</span>';return;}const form=new FormData();form.append("file",input.files[0]);status.innerHTML='<span class="badge neutral">업로드 중</span>';try{const{ok,data}=await api("/data/upload",{method:"POST",body:form});if(!ok){status.innerHTML=`<span class="badge err">${escapeHtml(data.detail||"업로드 실패")}</span>`;return;}status.innerHTML=`<span class="badge ok">${escapeHtml(data.filename)} · ${data.rows}행 업로드 완료</span>`;await loadDataStatus();}catch(e){status.innerHTML=`<span class="badge err">연결 실패: ${escapeHtml(e.message)}</span>`;}}
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function randomWalk(n,base,sigma){const a=[];let p=Math.log(base);for(let i=0;i<n;i++){p+=randn()*sigma;a.push(Math.exp(p))}return a}
+function rmseOf(actual,pred){const n=Math.min(actual.length,pred.length);if(!n)return null;return Math.sqrt(actual.slice(0,n).reduce((s,v,i)=>s+(v-pred[i])**2,0)/n)}
+
+function generatePredictExample(){const prices=randomWalk(SEQ_LEN,DEFAULT_BASE_PRICE,.01),sequence=prices.map(close=>({close:Number(close.toFixed(2)),volume:Math.round(1100000+Math.random()*300000)}));document.getElementById("predict-input").value=JSON.stringify({sequence},null,2);setBadge(document.getElementById("predict-status"),"neutral","대기 중");document.getElementById("predict-result").className="result";}
+async function runPrediction(){const input=document.getElementById("predict-input"),button=document.getElementById("predict-btn"),status=document.getElementById("predict-status"),result=document.getElementById("predict-result");let payload;try{payload=JSON.parse(input.value)}catch(e){setBadge(status,"err","JSON 형식 오류");showResult(result,e.message,true);return;}button.disabled=true;setBadge(status,"warn","예측 중");try{const{ok,data,status:code}=await api("/predict",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(!ok){setBadge(status,"err",`예측 실패 · HTTP ${code}`);showResult(result,data,true);return;}setBadge(status,"ok","예측 완료");showResult(result,data);await loadHealth();}catch(e){setBadge(status,"err","연결 실패");showResult(result,e.message,true)}finally{button.disabled=false}}
+
+async function sendBatch(kind){const badge=document.getElementById("simulation-status"),summary=document.getElementById("simulation-summary"),result=document.getElementById("simulation-result"),buttons=[document.getElementById("normal-btn"),document.getElementById("drift-btn")],prices=randomWalk(SEQ_LEN+WINDOW_SIZE,DEFAULT_BASE_PRICE,kind==="drift"?DRIFT_SIGMA:NORMAL_SIGMA);buttons.forEach(b=>b.disabled=true);setBadge(badge,"warn","실행 중");summary.className="empty";summary.textContent="모델 예측과 드리프트 판단을 기다리는 중입니다…";try{const{ok,status,data}=await api("/predict/batch-test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prices})});if(!ok){setBadge(badge,"err","실행 실패");summary.textContent=`HTTP ${status} 오류`;showResult(result,data,true);return;}const actual=prices.slice(SEQ_LEN),clientRmse=rmseOf(actual,data.predictions||[]),check=data.drift_check||{};lastPipelineRun={check,rmse:clientRmse,ts:Date.now()};document.getElementById("metric-rmse").textContent=clientRmse==null?"-":`$${clientRmse.toFixed(2)}`;document.getElementById("model-rmse").textContent=check.rmse!=null?`$${Number(check.rmse).toFixed(2)}`:(clientRmse==null?"-":`$${clientRmse.toFixed(2)}`);let type="ok",label="정상 · 드리프트 없음";if(check.status==="retrain_triggered"&&check.promoted===true){label="재학습 완료 · 새 모델 승격"}else if(check.status==="retrain_triggered"&&check.promoted===false){type="warn";label="재학습 완료 · 게이트 미통과"}else if(check.status==="retrain_triggered"){type="warn";label="드리프트 감지 · 재학습 실행"}setBadge(badge,type,label);summary.className="notice";summary.innerHTML=`<strong>${label}</strong><br>예측 ${data.predictions?.length||0}건 · 클라이언트 계산 RMSE ${clientRmse==null?"-":"$"+clientRmse.toFixed(2)} · 임계치 $${RMSE_THRESHOLD.toFixed(2)}`;showResult(result,data);renderPipeline();await loadLogs();}catch(e){setBadge(badge,"err","연결 실패");summary.textContent=e.message;showResult(result,e.message,true)}finally{buttons.forEach(b=>b.disabled=false)}}
+
+function renderPipeline(){let states=Array(7).fill("idle");if(lastPipelineRun){const c=lastPipelineRun.check;if(c.status==="retrain_triggered"&&c.promoted===true)states=["done","done","alert","done","done","done","done"];else if(c.status==="retrain_triggered"&&c.promoted===false)states=["done","done","alert","done","done","alert","idle"];else if(c.status==="retrain_triggered")states=["done","done","alert","done","done","idle","idle"];else states=["done","done","done","idle","idle","idle","idle"]}document.getElementById("pipeline").innerHTML=stages.map((s,i)=>`<div class="stage ${states[i]}"><div class="stage-icon">${s.icon}</div><div class="stage-title">${s.title}</div><div class="stage-desc">${s.desc}</div><div class="stage-status">${states[i]==="done"?"완료":states[i]==="alert"?"감지됨":"대기"}</div></div>`).join("");const b=document.getElementById("run-badge");setBadge(b,"neutral",lastPipelineRun?`마지막 실행 ${new Date(lastPipelineRun.ts).toLocaleTimeString("ko-KR")}`:"마지막 실행 없음")}
+async function loadLogs(){const files=document.getElementById("log-files"),alerts=document.getElementById("recent-alerts");try{const{ok,data}=await api("/logs");if(!ok||!Array.isArray(data)||!data.length){files.innerHTML='<span class="badge neutral">로그 파일 없음</span>';alerts.className="empty";alerts.textContent="아직 확인된 로그가 없습니다.";renderHistory("");return;}files.innerHTML=data.map(f=>`<button class="btn secondary" onclick="openLog('${encodeURIComponent(f.name)}')">${escapeHtml(f.name)} · ${f.size}B</button>`).join("");const f=data.find(x=>x.name==="aiops.log")||data[0],log=await api(`/logs/${encodeURIComponent(f.name)}`);if(log.ok){const content=log.data.content||"";renderRecentAlerts(content);renderHistory(content);}}catch{files.innerHTML='<span class="badge err">로그 연결 실패</span>';}}
+function renderHistory(content){const body=document.getElementById("history-table"),records=content.split("\n").map(line=>{const m=line.match(/^(\S+\s+\S+).*\[OK\]\s+new_rmse=([0-9.]+).*HAIC_Predictor\s+v([^\s]+)/);return m?{time:m[1],rmse:m[2],version:m[3]}:null}).filter(Boolean).reverse();if(!records.length){body.innerHTML='<tr><td colspan="5" class="empty">아직 Production 승격 이력이 없습니다.</td></tr>';return;}body.innerHTML=records.slice(0,12).map(r=>`<tr><td><strong>v${escapeHtml(r.version)}</strong></td><td>${escapeHtml(r.time.replace(",",""))}</td><td><span class="badge blue">fine-tune</span></td><td>$${Number(r.rmse).toFixed(2)}</td><td><span class="badge ok">Production</span></td></tr>`).join("");const latest=records[0];document.getElementById("model-version").textContent=`v${latest.version}`;document.getElementById("model-rmse").textContent=`$${Number(latest.rmse).toFixed(2)}`;}
+function renderRecentAlerts(content){const el=document.getElementById("recent-alerts"),lines=content.split("\n").filter(Boolean).slice(-5).reverse();if(!lines.length){el.className="empty";el.textContent="로그 파일은 있지만 아직 기록이 없습니다.";return;}el.className="";el.innerHTML=lines.map(line=>`<div style="display:flex;gap:9px;padding:10px 2px;border-bottom:1px solid var(--line);font-size:11px;"><span class="badge ${line.includes("[OK]")?"ok":line.includes("[WARN]")?"warn":"blue"}">${line.includes("[OK]")?"OK":line.includes("[WARN]")?"WARN":"INFO"}</span><span style="font-family:var(--mono);line-height:1.5;overflow-wrap:anywhere;">${escapeHtml(line)}</span></div>`).join("")}
+async function openLog(name){const box=document.getElementById("log-content");try{const{ok,data}=await api(`/logs/${name}`);showResult(box,ok?(data.content||"(비어 있음)"):data,!ok)}catch(e){showResult(box,e.message,true)}}
+async function refreshAll(){await Promise.all([loadHealth(),loadDataStatus(),loadLogs()])}
+renderPipeline();generatePredictExample();updateMetrics();refreshAll();
+</script>
+</body>
+</html>

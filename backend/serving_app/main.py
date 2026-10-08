@@ -3,14 +3,15 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+from backend.serving_app.routers import data, health, logs, metrics
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from serving_app import model_loader
-from serving_app.config import PROJECT_ROOT, log_dir
-from serving_app.monitoring.logger import RequestMonitor
-from serving_app.routers import data, health, logs, metrics, predict
+from backend.serving_app import model_loader
+from backend.serving_app.config import PROJECT_ROOT, log_dir
+from backend.serving_app.monitoring.logger import RequestMonitor
+from backend.serving_app.routers import predict
 
 DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
 

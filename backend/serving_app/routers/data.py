@@ -4,8 +4,8 @@ from starlette.concurrency import run_in_threadpool
 
 from data.csv_input import parse_csv, summarize_upload
 from data.storage import get_upload, list_records, save_upload
-from serving_app.config import max_upload_bytes, upload_dir
-from serving_app.schemas import DataStatus, ErrorResponse, UploadSummary
+from backend.serving_app.config import max_upload_bytes, upload_dir
+from backend.serving_app.schemas import DataStatus, ErrorResponse, UploadSummary
 
 router = APIRouter(prefix="/data", tags=["CSV 데이터"])
 

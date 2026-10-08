@@ -7,8 +7,8 @@ mlflow.db-*
 mlruns/
 mlartifacts/
 logs/
-serving_app/models/*.keras
-serving_app/models/*.pkl
+backend/serving_app/models/*.keras
+backend/serving_app/models/*.pkl
 .venv/
 __pycache__/
 *.py[cod]
