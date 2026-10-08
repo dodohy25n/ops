@@ -1,22 +1,16 @@
-"""Day1: 헬스체크 엔드포인트."""
+"""프로세스 생존과 모델의 준비 상태를 구분합니다."""
+import os
+
 from fastapi import APIRouter
 
 from serving_app import model_loader
+from serving_app.schemas import HealthResponse
 
-router = APIRouter()
+router = APIRouter(tags=["서버 상태"])
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthResponse)
 def health():
-    model_loaded = model_loader._model_cache is not None
-    return {
-        "status": "ok",
-        "model_loaded": model_loaded,
-        "loading_mode": _current_loading_mode(),
-    }
-
-
-def _current_loading_mode() -> str:
-    import os
-
-    return os.getenv("LOADING_MODE", "lazy")
+    state = model_loader.model_state()
+    return {"status": "ok", "model_loaded": state["state"] == "loaded",
+            "loading_mode": os.getenv("LOADING_MODE", "lazy"), "model": state}

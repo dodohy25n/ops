@@ -1,52 +1,52 @@
-"""
-FastAPI 앱 진입점.
-
-Day1: app 생성, 라우터(predict, health) 등록, startup 이벤트에서 로딩 모드에 따라 모델 준비
-Day2: data 라우터 등록 (HAIC 데이터 업로드)
-Day3: "aiops" 로거를 logs/aiops.log 파일로 연결(로깅 설정) + logs 라우터(로그 파일 조회) 등록
-
-정적 대시보드: serving_app/static/index.html 이 /health · /predict · /predict/batch-test ·
-/data/upload · /logs 를 호출하는 확인용 화면입니다. API 라우터를 먼저 등록한 뒤
-StaticFiles를 "/"에 마지막으로 mount해야, /predict 같은 API 경로가 정적 파일보다
-먼저 매칭됩니다(Starlette는 등록 순서대로 라우트를 검사합니다).
-"""
+"""카드 거래 CSV 배치 서버. 실행: uvicorn serving_app.main:app --port 8077"""
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from serving_app import model_loader
-from serving_app.routers import data, health, logs, predict
+from serving_app.config import PROJECT_ROOT, log_dir
+from serving_app.monitoring.logger import RequestMonitor
+from serving_app.routers import data, health, logs, metrics, predict
 
-# monitoring/retrain_trigger.py가 쓰는 "aiops" 로거를 logs/aiops.log 파일에 연결한다.
-# (routers/logs.py가 같은 디렉토리를 읽기 전용으로 노출한다.) 여기서 이 로거 하나만
-# 직접 설정하므로, uvicorn 자체 로깅 설정과 충돌하지 않는다.
-_LOG_DIR = "logs"
-os.makedirs(_LOG_DIR, exist_ok=True)
-_aiops_logger = logging.getLogger("aiops")
-_aiops_logger.setLevel(logging.INFO)
-if not _aiops_logger.handlers:
-    _handler = logging.FileHandler(os.path.join(_LOG_DIR, "aiops.log"), encoding="utf-8")
-    _handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    _aiops_logger.addHandler(_handler)
-    _aiops_logger.addHandler(logging.StreamHandler())  # 터미널에서도 동일하게 확인 가능
-
-app = FastAPI(title="HAIC Serving & AIOps")
-
-app.include_router(predict.router)
-app.include_router(health.router)
-app.include_router(data.router)  # HAIC 데이터 업로드
-app.include_router(logs.router)  # 대시보드: 재학습 로그 파일 조회
-
-_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/", StaticFiles(directory=_STATIC_DIR, html=True), name="static")  # 대시보드 UI
+DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
 
 
-@app.on_event("startup")
-def startup():
-    # Day1 실습 포인트: LOADING_MODE=eager 로 켜고 서버 시작 시간을 lazy와 비교해보세요.
-    if os.getenv("LOADING_MODE", "lazy") == "eager":
-        model_loader.load_eager()
-    else:
-        print("[lazy] 모델은 첫 /predict 요청이 들어올 때 로드됩니다.")
+def create_app():
+    monitor = RequestMonitor()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        mode = os.getenv("LOADING_MODE", "lazy")
+        if mode not in {"lazy", "eager"}:
+            raise ValueError("LOADING_MODE는 lazy 또는 eager여야 합니다.")
+        if os.getenv("MODEL_SOURCE", "local") not in {"local", "mlflow"}:
+            raise ValueError("MODEL_SOURCE는 local 또는 mlflow여야 합니다.")
+        monitor.start(log_dir())
+        try:
+            if mode == "eager":
+                try:
+                    model_loader.load_eager()
+                except Exception as exc:
+                    logging.getLogger("aiops").warning("eager load unavailable: %s", exc)
+            yield
+        finally:
+            monitor.stop()
+
+    app = FastAPI(title="카드 거래 CSV 배치 분석", version="0.1.0", lifespan=lifespan,
+                  description="기간별 거래 CSV를 업로드하고 카드별 최근 20건으로 이상거래를 판정합니다.")
+    app.state.monitor = monitor
+    app.middleware("http")(monitor.middleware)
+    origins = [s.strip() for s in os.getenv("FRAUD_CORS_ORIGINS", DEFAULT_ORIGINS).split(",") if s.strip()]
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"],
+                       allow_headers=["Content-Type"], expose_headers=["Content-Disposition"])
+    for router in (health.router, data.router, predict.router, metrics.router, logs.router):
+        app.include_router(router)
+    app.mount("/", StaticFiles(directory=PROJECT_ROOT / "serving_app/static", html=True), name="static")
+    return app
+
+
+app = create_app()

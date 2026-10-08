@@ -6,7 +6,8 @@ import mlflow
 from mlflow.exceptions import MlflowException
 from mlflow.tracking import MlflowClient
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from serving_app.config import PROJECT_ROOT
+
 MODEL_NAME = "CardFraudLSTM"
 ACTIVE_ALIAS = "champion"
 EXPERIMENT_NAME = "card-fraud-aiops"
