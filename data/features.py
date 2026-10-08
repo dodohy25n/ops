@@ -53,9 +53,11 @@ def load_transactions(pattern: str = "data/raw/*/*.csv") -> pd.DataFrame:
 
 
 def sort_transactions(df: pd.DataFrame) -> pd.DataFrame:
+    """시간대는 숫자로 비교합니다. 문자열로 비교하면 업로드의 "7"이 "15"보다 뒤에 놓입니다."""
     df = df.copy()
+    df["_hour"] = df["승인시간대"].astype(int)
     df["_seq"] = df["승인SEQ"].astype(int)
-    df = df.sort_values(["카드KEY", "승인일자", "승인시간대", "_seq"]).drop(columns="_seq")
+    df = df.sort_values(["카드KEY", "승인일자", "_hour", "_seq"]).drop(columns=["_hour", "_seq"])
     return df.reset_index(drop=True)
 
 

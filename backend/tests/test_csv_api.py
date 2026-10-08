@@ -147,6 +147,20 @@ class CsvApiTests(unittest.TestCase):
         self.assertEqual(len(list(csv.DictReader(io.StringIO(download.text)))), 12)
         self.assertEqual(self.client.get(path + "/transactions?offset=20").json()["items"], [])
 
+    def test_zero_padded_hours_keep_training_order(self):
+        # 원본은 시간대를 "07"처럼 두 자리로 기록합니다. 업로드 검사가 "7"로 바꿔도 학습과 같은 순서여야 합니다.
+        rows = sample_rows()
+        for i, row in enumerate(rows):
+            row["승인일자"], row["승인시간대"] = "20240801", f"{i % 25 % 24:02d}"
+            row["이상거래여부"] = "0"
+        model = FixtureModel(rows)
+        meta = self.upload(rows, label=True).json()
+        with patch.object(model_loader, "get_model", return_value=model):
+            response = self.client.post("/predict/batch", json={"upload_id": meta["upload_id"]})
+        self.assertEqual(response.status_code, 200, response.text)
+        expected, _, _, _ = build_sequences(sort_transactions(pd.DataFrame(rows)), model.scaler)
+        np.testing.assert_array_equal(np.concatenate(model.seen), expected)
+
     def test_period_uses_earlier_rows_as_context_without_scoring_them(self):
         rows = sample_rows()
         model = FixtureModel(rows)
