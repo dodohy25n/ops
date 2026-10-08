@@ -179,7 +179,7 @@ class CsvApiTests(unittest.TestCase):
         self.assertIn('"duration_ms"', log["content"])
         for line in log["content"].splitlines():
             self.assertIsInstance(json.loads(line)["status"], int)
-        with patch("serving_app.routers.data.max_upload_bytes", return_value=10):
+        with patch("backend.serving_app.routers.data.max_upload_bytes", return_value=10):
             self.assertEqual(self.upload().status_code, 413)
 
     def test_frontend_cors_preflight_and_error_responses(self):
