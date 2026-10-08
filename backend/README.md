@@ -21,13 +21,13 @@ v1은 MLflow Registry 버전 1로 등록되어 운영 모델(`champion`)입니�
 | v1 기준 운영 모델 등록 | 완료 — 버전 1이 `champion` |
 | 카드 거래 CSV 업로드·배치 분석 API | 구현·검증 완료 |
 | PSI·성능 감시와 재학습 연결 | 설계 완료, 실행 연결 미구현 |
-| CSV 서버·확인 화면·Docker | 기본 API 이미지 빌드·컨테이너 검증 완료 |
+| CSV 서버·대시보드·Docker | 구현. 컨테이너에서 champion으로 분석, 로컬과 판정 일치 확인 |
 | 드리프트·자동 재학습 전체 시연 | 미완료 |
 
-프론트 개발용 백엔드는 아래 명령으로 실행합니다. 기본 포트는 8099이며 Swagger는 `/docs`입니다. 업로드·결과·로그는 Docker 볼륨에 유지합니다. 모델 미준비 시 분석은 HTTP 503을 반환합니다.
+프론트 개발용 백엔드는 아래 명령으로 실행합니다. 기본 포트는 8099이며 Swagger는 `/docs`입니다. 업로드·결과·로그는 Docker 볼륨에 유지합니다. 기본 이미지는 모델 런타임이 없어 분석이 HTTP 503이며, 실제 판정은 [서버 가이드](docs/FastAPI-CSV서버.md#모델-연결)의 `model-runtime` 절차를 따릅니다.
 
 ```bash
-docker compose -f serving_app/docker-compose.yml up -d --build
+docker compose -f backend/serving_app/docker-compose.yml up -d --build
 ```
 
 ## 데이터와 모델
@@ -67,7 +67,7 @@ Recall 0.95와 경보 상한 6%는 v1의 상반기 측정값과 처리량 가정
 
 ## 검증 자료
 
-- [CSV 서버 실행·API·Docker 검증](docs/FastAPI-CSV서버.md): CSV/API 13개와 기존 게이트 8개 테스트, 기본 컨테이너 기동·업로드·CORS·재시작 유지 검증을 정리했습니다.
+- [CSV 서버 실행·API·Docker 검증](docs/FastAPI-CSV서버.md): 테스트 25개, 컨테이너 기동·업로드·champion 분석·로컬과 판정 일치·재시작 유지 검증을 정리했습니다.
 - [검증 범위와 결과](docs/results/검증결과.md): 테스트와 실제 모델 검증을 구분했습니다.
 
 원본 데이터와 MLflow DB는 이 저장소에 포함되지 않으며, 복제한 환경에서는 실행 명령으로 새 기록을 생성합니다.

@@ -6,27 +6,25 @@
 
 ## 빠른 시작: Docker
 
-> 2026-10-08 폴더 구조를 `backend/`·`frontend/`·`data/`로 나눈 뒤 Dockerfile·compose의 경로는 아직 갱신하지 않았습니다. 아래 명령은 구조 변경 전 기준이며 다시 검증해야 합니다.
-
-프로젝트 루트에서 실행합니다.
+저장소 최상위 폴더에서 실행합니다. 빌드 컨텍스트가 저장소 최상위라서 `backend/`·`data/`·`frontend/`가 함께 이미지에 들어갑니다. 원본 데이터·모델 파일·실행 기록은 `.dockerignore`로 제외합니다.
 
 ```bash
-docker compose -f serving_app/docker-compose.yml up -d --build
+docker compose -f backend/serving_app/docker-compose.yml up -d --build
 ```
 
 - 백엔드와 대시보드: http://localhost:8099/
 - Swagger API 문서: http://localhost:8099/docs
 - 서버·모델 상태: http://localhost:8099/health
-- 종료: `docker compose -f serving_app/docker-compose.yml down`
+- 종료: `docker compose -f backend/serving_app/docker-compose.yml down`
 
-기본 `api` 이미지는 CSV 검증·저장·상태 조회와 프론트 연동을 실행합니다. 모델이나 TensorFlow 없이도 기동됩니다. 현재 저장소에는 실제 모델·스케일러가 없으므로 분석 요청은 HTTP 503을 반환합니다. 이 상태를 성공 판정이나 운영 승격으로 표시하지 않습니다.
+기본 `api` 이미지는 CSV 검증·저장·상태 조회와 대시보드를 실행하며 TensorFlow·MLflow를 포함하지 않습니다. 그래서 분석 요청은 HTTP 503을 반환합니다. 실제 판정은 아래 [모델 연결](#모델-연결)의 `model-runtime` 이미지를 사용합니다.
 
-업로드, 결과, 로그는 `card-fraud-csv_runtime` Docker 볼륨에 보관합니다. 일반 재시작과 `down` 후 재기동에서도 유지됩니다. 모델 폴더는 호스트의 `serving_app/models/`를 읽기 전용으로 연결합니다. PDF·원본 데이터·모델 파일·Git 정보는 이미지 빌드 컨텍스트에서 제외합니다.
+업로드, 결과, 로그, 컨테이너의 MLflow 저장소는 `card-fraud-csv_runtime` Docker 볼륨에 보관합니다. 일반 재시작과 `down` 후 재기동에서도 유지됩니다. 모델 폴더는 호스트의 `backend/serving_app/models/`를 읽기 전용으로 연결합니다.
 
 기본 이미지 빌드만 필요한 경우:
 
 ```bash
-docker build -f serving_app/Dockerfile -t card-fraud-api:dev .
+docker build -f backend/serving_app/Dockerfile --target api -t card-fraud-api:api .
 ```
 
 ## 로컬 실행
@@ -39,6 +37,8 @@ source .venv/bin/activate
 pip install -r backend/requirements.txt
 uvicorn backend.serving_app.main:app --host 127.0.0.1 --port 8077
 ```
+
+기본값은 Registry의 `champion`을 읽으므로, 새로 복제한 환경에서는 v1을 학습한 뒤 `python -m backend.serving_app.train_and_register`로 한 번 등록합니다. 등록 전에 v1 파일만 확인할 때는 `MODEL_SOURCE=local`로 실행합니다.
 
 브라우저에서 http://localhost:8077/ 에 접속하면 대시보드가 열립니다. 업로드·결과·로그는 `backend/data/`와 `backend/logs/`에 저장되며 Git에서 제외합니다.
 
@@ -126,15 +126,18 @@ UTF-8(BOM 포함)과 CP949를 지원하며 기본 크기 제한은 128MB입니�
 
 ## 모델 연결
 
-`MODEL_SOURCE=local`은 `serving_app/models/fraud_v1.keras`, `scaler.pkl`, `thresholds.json`을 읽고 결과에 `model_role=local`을 기록합니다. `MODEL_SOURCE=mlflow`는 Registry의 운영 모델 `champion`을 읽고 `model_role=champion`을 기록합니다. 현재 `champion`은 v1(버전 1)이며, 이후 게이트를 통과한 v2가 생기면 그 버전으로 바뀝니다.
+기본값 `MODEL_SOURCE=mlflow`는 MLflow Registry의 운영 모델 `champion`을 읽고 결과에 `model_role=champion`을 기록합니다. 분석할 때마다 `champion`이 가리키는 버전을 확인해, 게이트를 통과한 새 버전으로 옮겨졌으면 서버 재시작 없이 그 버전을 불러옵니다. 새 버전을 읽다가 실패하면 기존 모델로 계속 판정합니다. 현재 `champion`은 v1(버전 1)입니다.
 
-실제 추론 런타임이 필요한 경우 제공된 `model-runtime` Docker target을 선택하고 모델·스케일러를 준비합니다.
+`MODEL_SOURCE=local`은 Registry 없이 `backend/serving_app/models/`의 `fraud_v1.keras`, `scaler.pkl`, `thresholds.json`을 직접 읽고 `model_role=local`을 기록합니다. 등록 전 v1 확인용이며, 게이트를 통과한 모델로 교체되지 않습니다.
+
+실제 모델로 판정하려면 `model-runtime` 이미지를 띄우고, 컨테이너의 빈 Registry에 v1을 기준 운영 모델로 한 번 등록합니다. 등록 기록은 Docker 볼륨에 남으므로 재시작해도 다시 등록할 필요가 없습니다.
 
 ```bash
-FRAUD_DOCKER_TARGET=model-runtime docker compose -f serving_app/docker-compose.yml up -d --build
+FRAUD_DOCKER_TARGET=model-runtime docker compose -f backend/serving_app/docker-compose.yml up -d --build
+docker compose -f backend/serving_app/docker-compose.yml exec serving-api python -m backend.serving_app.train_and_register
 ```
 
-이 target에는 TensorFlow·MLflow 설치 설정이 있습니다. 이번에는 기본 `api` target만 빌드·검증했고 실제 모델이 없어 `model-runtime`의 LSTM 판정은 검증하지 않았습니다. MLflow 저장소는 컨테이너의 `/runtime/registry` 경로를 사용합니다. 과거 환경의 절대 경로를 참조하는 DB를 복사하는 것만으로 아티팩트 접근이 보장되지는 않습니다.
+호스트의 `backend/mlflow.db`를 컨테이너로 복사하지 않는 이유는 DB가 호스트의 절대 경로로 아티팩트를 가리키기 때문입니다. 컨테이너에서 같은 v1 파일로 다시 등록하면 Registry 위치와 아티팩트 경로가 일치합니다.
 
 모델·스케일러·τ는 기존 로더를 재사용합니다. 서버 요청에서 스케일러를 새로 fit하지 않습니다. 분석 중에는 한 모델 객체를 사용하며, 시퀀스는 4,096개씩 만들어 추론하므로 전체 3차원 입력을 한꺼번에 만들지 않습니다. CSV 파싱·정렬과 피처 변환은 메모리에서 처리합니다.
 
@@ -172,13 +175,13 @@ HAIC 실습의 RMSE 기반 감시·재학습 모듈은 카드 구조와 맞지 �
 
 | 변수 | 기본값 | 용도 |
 |---|---|---|
-| `MODEL_SOURCE` | `local` | `local` 또는 `mlflow` |
+| `MODEL_SOURCE` | `mlflow` | `mlflow`는 Registry의 champion, `local`은 v1 파일 직접 읽기 |
 | `LOADING_MODE` | `lazy` | `eager`는 기동 시 로딩 시도. 실패해도 상태·업로드 API 기동 |
 | `FRAUD_API_DIR` | 프로젝트 루트; Docker는 `/runtime` | 업로드·결과·로그 저장 루트 |
 | `FRAUD_MAX_UPLOAD_MB` | `128` | CSV 파일 크기 제한 |
 | `FRAUD_CORS_ORIGINS` | localhost/127.0.0.1의 5173·3000 | 허용할 프론트 주소 |
 | `FRAUD_API_PORT` | `8099` | Compose의 호스트 포트 |
-| `FRAUD_DOCKER_TARGET` | `api` | Compose의 빌드 target |
+| `FRAUD_DOCKER_TARGET` | `api` | Compose의 빌드 target. 실제 판정은 `model-runtime` |
 | `FRAUD_MLFLOW_DIR` | 프로젝트 루트; Docker는 `/runtime/registry` | MLflow DB·아티팩트 저장 위치 |
 
 ## 검증
@@ -188,8 +191,17 @@ pip install httpx2==2.13.0
 python -m unittest discover -s backend/tests -t . -v
 ```
 
-CSV/API 13개와 기존 게이트 8개 테스트가 통과했습니다. API 테스트는 가상 시험 모델로 HTTP 연결, 학습 전처리 일치, 카드·기간 경계, 정답 선택 평가, 결과 저장·페이지 조회·다운로드, 오류, CORS, 캐시, Eager 실패 대응을 확인합니다. 실제 학습 모델의 성능 검증을 뜻하지 않습니다.
+테스트 25개(CSV/API 15개, 배포 게이트 9개, Registry 흐름 1개)가 통과했습니다. API 테스트는 가상 시험 모델로 HTTP 연결, 학습 전처리 일치, 카드·기간 경계, 정답 선택 평가, 결과 저장·페이지 조회·다운로드, 오류, CORS, 캐시, Eager 실패 대응을 확인합니다. 실제 학습 모델의 성능 검증을 뜻하지 않습니다.
 
-기본 Docker 이미지의 ARM64 빌드·healthy 상태, Swagger, CSV 업로드, 모델 미준비 503, CORS, 컨테이너 재시작 후 업로드 유지도 확인했습니다. 실제 LSTM·MLflow 전체 검증은 모델과 데이터 준비 후 별도로 수행해야 합니다.
+2026-10-08 폴더 구조 변경 후 Docker 구성을 다시 검증했습니다(ARM64).
+
+| 항목 | 결과 |
+|---|---|
+| `api` 이미지 | healthy, 대시보드 200, CSV 업로드 201, 모델 런타임 없음으로 분석 503 |
+| `model-runtime` 이미지 | Registry가 비어 있을 때 503 → 컨테이너에서 v1 등록 후 `champion` 버전 1로 분석 |
+| 로컬과 컨테이너 판정 일치 | 운영 구간 카드 300장 CSV, 판정 43,503건에서 점수 최대 차이 0, 판정 전건 일치 |
+| 재시작 | 업로드 기록과 운영 버전 1 유지 |
+
+로컬과 컨테이너는 `backend/requirements-api.txt`의 같은 버전(pandas 3.0.6, numpy 2.4.4, fastapi 0.141.1)을 사용합니다.
 
 구현 참고: [FastAPI 파일 업로드](https://fastapi.tiangolo.com/tutorial/request-files/), [앱 lifespan](https://fastapi.tiangolo.com/advanced/events/), [HTTP 테스트](https://fastapi.tiangolo.com/tutorial/testing/).
