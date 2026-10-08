@@ -1,7 +1,7 @@
-# CSV 서버 기본 기능. 실제 모델 추론에는 TensorFlow·MLflow도 필요합니다.
-fastapi==0.142.2
-uvicorn==0.54.0
-pydantic==2.13.4
-numpy==2.1.3
-pandas==2.3.3
+# CSV 서버 기본 기능. 로컬 개발 환경과 같은 버전으로 고정해 컨테이너와 판정이 어긋나지 않게 합니다.
+fastapi==0.141.1
+uvicorn[standard]==0.46.0
+pydantic==2.13.3
+numpy==2.4.4
+pandas==3.0.6
 python-multipart==0.0.20

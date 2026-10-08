@@ -1,9 +1,5 @@
-fastapi==0.141.1
-uvicorn[standard]==0.46.0
-pydantic==2.13.3
-numpy==2.4.4
-pandas==3.0.6
+# 학습, MLflow 등록, 실제 모델 추론까지 포함한 전체 환경입니다.
+-r requirements-api.txt
 tensorflow==2.21.0
 mlflow==3.16.0
 requests==2.33.1
-python-multipart==0.0.20

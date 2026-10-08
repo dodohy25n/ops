@@ -1,20 +1,20 @@
 name: card-fraud-csv
 services:
   serving-api:
-    image: card-fraud-api:dev
+    image: card-fraud-api:${FRAUD_DOCKER_TARGET:-api}
     build:
-      context: ..
-      dockerfile: serving_app/Dockerfile
+      context: ../..
+      dockerfile: backend/serving_app/Dockerfile
       target: ${FRAUD_DOCKER_TARGET:-api}
     ports:
       - "127.0.0.1:${FRAUD_API_PORT:-8099}:8077"
     environment:
-      MODEL_SOURCE: ${MODEL_SOURCE:-local}
+      MODEL_SOURCE: ${MODEL_SOURCE:-mlflow}
       LOADING_MODE: ${LOADING_MODE:-lazy}
       FRAUD_MAX_UPLOAD_MB: ${FRAUD_MAX_UPLOAD_MB:-128}
       FRAUD_CORS_ORIGINS: ${FRAUD_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
     volumes:
       - runtime:/runtime
-      - ./models:/app/serving_app/models:ro
+      - ./models:/app/backend/serving_app/models:ro
 volumes:
   runtime:

@@ -9,12 +9,13 @@ from importlib.metadata import version as package_version
 import mlflow
 import mlflow.tensorflow
 import numpy as np
+import pandas as pd
 from mlflow.models import infer_signature
 
-from data.features import FEATURES, FraudScaler
+from data.features import FEATURES, FraudScaler, build_sequences, sort_transactions
 from backend.serving_app.model_loader import LoadedModel, _load_from_local, load_registered_version
 from backend.serving_app.monitoring.deployment_gate import check_gate
-from backend.serving_app.config import MODEL_DIR, PROJECT_ROOT
+from backend.serving_app.config import DATA_DIR, MODEL_DIR, log_dir
 from backend.serving_app.registry import (
     ACTIVE_ALIAS, MODEL_NAME, active_version, configure_registry, experiment_id,
 )
@@ -114,12 +115,14 @@ def register_candidate(model, settings, scaler_path, X, y, evaluation, *, run_na
 
 
 def main():
-    valid = np.load(PROJECT_ROOT.parent / "data/processed/valid.npz")
-    X = valid["X"][:1024]
+    # 서명과 저장 전후 비교에는 저장소에 포함된 가상 거래를 씁니다. 원본 데이터가 없는 컨테이너에서도 등록할 수 있습니다.
     local = _load_from_local()
+    sample = pd.read_csv(DATA_DIR / "sample_card_transactions.csv", dtype=str, keep_default_na=False)
+    sample["이상거래여부"] = "0"
+    X, _, _, _ = build_sequences(sort_transactions(sample), local.scaler)
     result = register_baseline(local.keras_model, local.settings, MODEL_DIR / "scaler.pkl", X)
-    output = PROJECT_ROOT / "logs/baseline-registration.json"
-    output.parent.mkdir(exist_ok=True)
+    output = log_dir() / "baseline-registration.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     print(f"v1 기준 운영 모델 등록: 버전 {result['version']}, τ {result['tau']}, 별칭 {ACTIVE_ALIAS}")
 
