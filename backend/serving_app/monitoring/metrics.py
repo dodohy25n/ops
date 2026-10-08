@@ -67,17 +67,37 @@ def best_threshold(y_true: np.ndarray, scores: np.ndarray) -> float:
     return best_tau
 
 
-def psi_reference(values: np.ndarray, n_bins: int = 10) -> dict:
-    """기준 분포를 10분위 구간으로 나눠 저장합니다. 0/1 피처는 구간 두 개가 됩니다."""
+def psi_reference(values: np.ndarray, n_bins: int = 10, categorical: bool = False) -> dict:
+    """기준 분포를 저장합니다. 수치형은 10분위 구간, 범주형은 값별 비율입니다.
+
+    0이 대부분인 0/1 피처를 분위수로 나누면 경계가 0 하나만 남아 0과 1이 같은 구간에 들어가므로,
+    범주형은 구간 대신 값마다 비율을 셉니다.
+    """
+    values = np.asarray(values)
+    if categorical:
+        categories, counts = np.unique(np.round(values, 6), return_counts=True)
+        return {"categories": categories.tolist(), "ratios": (counts / counts.sum()).tolist()}
     edges = np.unique(np.quantile(values, np.linspace(0.1, 0.9, n_bins - 1)))
     counts = np.bincount(np.digitize(values, edges), minlength=len(edges) + 1)
     return {"edges": edges.tolist(), "ratios": (counts / counts.sum()).tolist()}
 
 
-def psi(reference: dict, values: np.ndarray) -> float:
-    edges = np.array(reference["edges"])
+def _bin_counts(reference: dict, values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    values = np.asarray(values)
     expected = np.array(reference["ratios"])
-    counts = np.bincount(np.digitize(values, edges), minlength=len(edges) + 1)
+    if "categories" in reference:
+        categories = np.array(reference["categories"])
+        index = np.searchsorted(categories, np.round(values, 6))
+        known = (index < len(categories)) & (categories[np.minimum(index, len(categories) - 1)] == np.round(values, 6))
+        # 기준 기간에 없던 값은 마지막 칸에 모읍니다.
+        counts = np.bincount(np.where(known, index, len(categories)), minlength=len(categories) + 1)
+        return counts, np.r_[expected, 0.0]
+    edges = np.array(reference["edges"])
+    return np.bincount(np.digitize(values, edges), minlength=len(edges) + 1), expected
+
+
+def psi(reference: dict, values: np.ndarray) -> float:
+    counts, expected = _bin_counts(reference, values)
     actual = counts / counts.sum()
     expected = np.clip(expected, PSI_EPS, None)
     actual = np.clip(actual, PSI_EPS, None)

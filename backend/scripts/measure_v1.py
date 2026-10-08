@@ -6,7 +6,7 @@ v1을 2024년 상반기(valid)에 돌려 운영 기준값을 측정하고 backen
   1) 분류 기준점 tau: F2가 가장 높은 확률값
   2) 배포 게이트 하한: R_min(v1 Recall 내림), P_min(사기율 x R_min / 경보 상한)
   3) 드리프트 트리거 기준: 1,000건 창마다 Precision, Recall을 재서 평균 - 2시그마, 평균 - 1시그마
-  4) PSI 기준 분포: 학습 기간 거래와 v1 예측 확률의 분포, 그리고 정상 창의 PSI 범위
+  4) PSI 기준 분포: 학습 기간 거래(수치형 10분위, 범주형 값별 비율)와 v1 예측 확률의 분포, 그리고 정상 창의 PSI 범위
   5) beta=2의 근거: 이상거래와 정상 거래의 평균 승인 금액
 """
 import json
@@ -40,6 +40,7 @@ CONSECUTIVE = 2
 PSI_WARN = 0.1
 PSI_ALERT = 0.25
 PSI_FEATURES = ["amount_log", "hour", "overseas", "merchant_sales_bin", "installment"]
+PSI_CATEGORICAL = {"overseas", "merchant_sales_bin", "installment"}
 
 
 def window_stats(y, scores, tau, order):
@@ -96,7 +97,9 @@ def main():
 
     train = np.load(DATA_DIR / "processed/train.npz")
     train_last, train_y = train["X"][:, -1, :], train["y"]
-    feature_refs = {f: psi_reference(train_last[:, FEATURES.index(f)]) for f in PSI_FEATURES}
+    feature_refs = {
+        f: psi_reference(train_last[:, FEATURES.index(f)], categorical=f in PSI_CATEGORICAL) for f in PSI_FEATURES
+    }
     score_ref = psi_reference(scores)
     last = X[:, -1, :]
     normal_psi = {
