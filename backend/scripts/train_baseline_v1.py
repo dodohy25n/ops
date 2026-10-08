@@ -1,10 +1,11 @@
 """
-첫 번째 버전 모델(v1)을 학습해 serving_app/models/fraud_v1.keras로 저장합니다.
+첫 번째 버전 모델(v1)을 학습해 backend/serving_app/models/fraud_v1.keras로 저장합니다.
 
 실행 순서
-  1) python scripts/prepare_data.py      시퀀스와 스케일러 만들기
-  2) python scripts/train_baseline_v1.py 이 파일
-  3) python scripts/measure_v1.py        검증 구간에서 기준값 측정
+  (프로젝트 최상위에서)
+  1) python backend/scripts/prepare_data.py      시퀀스와 스케일러 만들기
+  2) python backend/scripts/train_baseline_v1.py 이 파일
+  3) python backend/scripts/measure_v1.py        검증 구간에서 기준값 측정
 
 학습에는 2021~2023년 시퀀스만 씁니다. 2024년 상반기(valid)는 기준값을 재는 시험지라서
 학습 중에는 열어 보지 않습니다. 대신 학습 데이터 끝쪽 카드 10%를 떼어 학습이 나아지는지만
@@ -17,10 +18,11 @@ import time
 import numpy as np
 from tensorflow import keras
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from backend.serving_app.config import DATA_DIR, MODEL_DIR
 from backend.serving_app.lstm_model import build_model
 
-MODEL_PATH = "serving_app/models/fraud_v1.keras"
+MODEL_PATH = MODEL_DIR / "fraud_v1.keras"
 SEED = 42
 MAX_EPOCHS = 15
 BATCH_SIZE = 512
@@ -28,7 +30,7 @@ BATCH_SIZE = 512
 
 def main():
     keras.utils.set_random_seed(SEED)
-    data = np.load("data/processed/train.npz")
+    data = np.load(DATA_DIR / "processed/train.npz")
     X, y = data["X"], data["y"]
     print(f"학습 시퀀스 {len(y):,}개, 이상거래 비율 {y.mean():.4f}")
 

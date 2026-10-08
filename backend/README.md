@@ -100,15 +100,15 @@ CSV 서버만 실행할 때는 [서버 가이드](docs/FastAPI-CSV서버.md)의 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt httpx2==2.13.0
 
-python scripts/prepare_data.py
-python scripts/train_baseline_v1.py
-python scripts/measure_v1.py
-python scripts/compare_beta.py
-python -m serving_app.train_and_register
-python scripts/verify_stage4.py
-python -m unittest discover -s tests -v
+python backend/scripts/prepare_data.py
+python backend/scripts/train_baseline_v1.py
+python backend/scripts/measure_v1.py
+python backend/scripts/compare_beta.py
+python -m backend.serving_app.train_and_register
+python backend/scripts/verify_stage4.py
+python -m unittest discover -s backend/tests -t . -v
 ```
 
 데이터 준비와 학습을 이미 실행했다면 `train_and_register`부터 실행합니다. 최초 게이트 미달 시에도 후보와 지표는 저장되며, 등록 명령은 종료 코드 2로 배포 보류를 알립니다. 이는 현재 실제 측정 결과입니다.

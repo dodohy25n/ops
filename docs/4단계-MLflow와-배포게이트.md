@@ -84,12 +84,12 @@ Recall 저하의 원인은 아직 확정하지 않았습니다. 입력 변환을
 프로젝트 최상위 폴더에서, 데이터와 v1을 준비한 뒤 실행합니다.
 
 ```bash
-python -m serving_app.train_and_register
-python scripts/verify_stage4.py
-python -m unittest discover -s tests -v
+python -m backend.serving_app.train_and_register
+python backend/scripts/verify_stage4.py
+python -m unittest discover -s backend/tests -t . -v
 ```
 
-현재 v1은 게이트에 미달하므로 첫 명령은 후보를 등록한 뒤 종료 코드 2를 반환합니다. 평가와 검증 결과는 `logs/stage4-registration.json`, `logs/stage4-verification.json`에 남습니다. MLflow run에는 `gate.json`, `evaluation.json`, `registration.json`이 저장됩니다.
+현재 v1은 게이트에 미달하므로 첫 명령은 후보를 등록한 뒤 종료 코드 2를 반환합니다. 평가와 검증 결과는 `backend/logs/stage4-registration.json`, `backend/logs/stage4-verification.json`에 남습니다. MLflow run에는 `gate.json`, `evaluation.json`, `registration.json`이 저장됩니다.
 
 코드는 프로젝트의 절대 경로로 SQLite DB와 아티팩트 위치를 정합니다. 테스트에서는 `FRAUD_MLFLOW_DIR`로 임시 경로를 지정해 실제 후보 기록에 영향을 주지 않습니다.
 

@@ -8,7 +8,7 @@ from threading import RLock
 import numpy as np
 
 from data.features import FEATURES, N_FEATURES, SEQ_LEN, FraudScaler, sequence_from_rows
-from backend.serving_app.config import PROJECT_ROOT
+from backend.serving_app.config import MODEL_DIR
 
 _model_cache = None
 _load_lock = RLock()
@@ -80,7 +80,7 @@ def _load_from_mlflow():
 
 
 def _load_from_local():
-    root = PROJECT_ROOT / "serving_app/models"
+    root = MODEL_DIR
     missing = [p.name for p in (root / "fraud_v1.keras", root / "scaler.pkl", root / "thresholds.json")
                if not p.is_file()]
     if missing:
@@ -156,7 +156,7 @@ def model_state():
         return {"state": "loaded", "source": source, "version": model.version,
                 "tau": model.tau, "role": role, "error": _last_load_error,
                 "criteria": criteria_from(getattr(model, "settings", None))}
-    root = PROJECT_ROOT / "serving_app/models"
+    root = MODEL_DIR
     missing = ([p.name for p in (root / "fraud_v1.keras", root / "scaler.pkl", root / "thresholds.json")
                 if not p.is_file()] if source == "local" else [])
     # 로컬 모드는 로딩 전에도 같은 버전의 기준 파일을 읽어 보여줄 수 있습니다.

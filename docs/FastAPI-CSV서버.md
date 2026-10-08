@@ -184,9 +184,8 @@ HAIC 실습의 RMSE 기반 감시·재학습 모듈은 카드 구조와 맞지 �
 ## 검증
 
 ```bash
-pip install httpx==0.28.1
-python -m unittest discover -s tests -p test_csv_api.py -v
-python -m unittest discover -s tests -p test_deployment_gate.py -v
+pip install httpx2==2.13.0
+python -m unittest discover -s backend/tests -t . -v
 ```
 
 CSV/API 13개와 기존 게이트 8개 테스트가 통과했습니다. API 테스트는 가상 시험 모델로 HTTP 연결, 학습 전처리 일치, 카드·기간 경계, 정답 선택 평가, 결과 저장·페이지 조회·다운로드, 오류, CORS, 캐시, Eager 실패 대응을 확인합니다. 실제 학습 모델의 성능 검증을 뜻하지 않습니다.

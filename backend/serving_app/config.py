@@ -3,10 +3,13 @@ import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROJECT_ROOT.parent
+MODEL_DIR = PROJECT_ROOT / "serving_app/models"
+DATA_DIR = REPO_ROOT / "data"
 
 
 def frontend_dir():
-    return Path(os.getenv("FRAUD_FRONTEND_DIR", str(PROJECT_ROOT.parent / "frontend"))).resolve()
+    return Path(os.getenv("FRAUD_FRONTEND_DIR", str(REPO_ROOT / "frontend"))).resolve()
 
 
 def runtime_dir():

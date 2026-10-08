@@ -1,4 +1,4 @@
-"""저장된 v1을 재학습 없이 심사, 등록합니다. 실행: python -m serving_app.train_and_register"""
+"""저장된 v1을 재학습 없이 심사, 등록합니다. 실행(프로젝트 최상위): python -m backend.serving_app.train_and_register"""
 import copy
 import json
 from importlib.metadata import version as package_version
@@ -11,8 +11,9 @@ from mlflow.models import infer_signature
 from data.features import FEATURES, FraudScaler
 from backend.serving_app.model_loader import LoadedModel, _load_from_local, load_registered_version
 from backend.serving_app.monitoring.deployment_gate import check_gate
+from backend.serving_app.config import MODEL_DIR, PROJECT_ROOT
 from backend.serving_app.registry import (
-    ACTIVE_ALIAS, MODEL_NAME, PROJECT_ROOT, active_version, configure_registry, experiment_id,
+    ACTIVE_ALIAS, MODEL_NAME, active_version, configure_registry, experiment_id,
 )
 
 
@@ -22,7 +23,7 @@ def register_candidate(model, settings, scaler_path, X, y, evaluation, *, run_na
     settings["features"] = FEATURES
     if settings["beta"] != 2:
         raise ValueError("이번 실습의 배포 기준은 F2(beta=2)입니다.")
-    policy = json.loads((PROJECT_ROOT / "serving_app/models/thresholds.json").read_text())["gate"]
+    policy = json.loads((MODEL_DIR / "thresholds.json").read_text())["gate"]
     candidate = LoadedModel(model, FraudScaler.load(scaler_path), settings, "candidate")
     scores = candidate.predict_scores(X)
     client = configure_registry()
@@ -85,7 +86,7 @@ def main():
     local = _load_from_local()
     print(f"[1] 7월 독립 평가: {len(y):,}건, 이상거래 {int(y.sum()):,}건", flush=True)
     result = register_candidate(
-        local.keras_model, local.settings, PROJECT_ROOT / "serving_app/models/scaler.pkl",
+        local.keras_model, local.settings, MODEL_DIR / "scaler.pkl",
         X, y, evaluation, run_name="v1-initial-registration",
     )
     output = PROJECT_ROOT / "logs/stage4-registration.json"

@@ -1,11 +1,14 @@
-"""실제 v1의 로컬 파일과 MLflow 기록이 같은 예측, 판정을 내는지 확인합니다."""
+"""실제 v1의 로컬 파일과 MLflow 기록이 같은 예측, 판정을 내는지 확인합니다.
+
+실행(프로젝트 최상위): python backend/scripts/verify_stage4.py
+"""
 import json
 import sys
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from data.gate_holdout import load_gate_holdout
 from backend.serving_app.model_loader import _load_from_local, load_registered_version, load_run_bundle
 from backend.serving_app.monitoring.deployment_gate import check_gate

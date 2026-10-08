@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from data.features import FraudScaler, build_sequences, sort_transactions
-from backend.serving_app.registry import PROJECT_ROOT
+from backend.serving_app.config import DATA_DIR, MODEL_DIR
 
 GATE_START = "20240701"
 GATE_END = "20240731"
@@ -13,9 +13,9 @@ OPS_START = "20240801"
 
 
 def load_gate_holdout():
-    rows = pd.read_csv(PROJECT_ROOT / "data/processed/ops_rows.csv", dtype=str)
+    rows = pd.read_csv(DATA_DIR / "processed/ops_rows.csv", dtype=str)
     rows = sort_transactions(rows[rows["승인일자"] <= GATE_END])
-    scaler = FraudScaler.load(PROJECT_ROOT / "serving_app/models/scaler.pkl")
+    scaler = FraudScaler.load(MODEL_DIR / "scaler.pkl")
     X, y, dates, _ = build_sequences(rows, scaler)
     mask = (dates >= GATE_START) & (dates <= GATE_END)
     X, y, dates = X[mask], y[mask], dates[mask].astype("U8")

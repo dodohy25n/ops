@@ -1,5 +1,6 @@
 """
-v1을 2024년 상반기(valid)에 돌려 운영 기준값을 측정하고 serving_app/models/thresholds.json에 저장합니다.
+v1을 2024년 상반기(valid)에 돌려 운영 기준값을 측정하고 backend/serving_app/models/thresholds.json에 저장합니다.
+실행(프로젝트 최상위): python backend/scripts/measure_v1.py
 
 설계 문서(docs/설계지표.md)의 [측정] 값이 모두 여기서 나옵니다.
   1) 분류 기준점 tau: F2가 가장 높은 확률값
@@ -16,8 +17,9 @@ from datetime import date
 import numpy as np
 from tensorflow import keras
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from data.features import FEATURES, FraudScaler
+from backend.serving_app.config import DATA_DIR, MODEL_DIR
 from backend.serving_app.monitoring.metrics import (
     BETA,
     best_threshold,
@@ -27,8 +29,8 @@ from backend.serving_app.monitoring.metrics import (
     psi_reference,
 )
 
-MODEL_PATH = "serving_app/models/fraud_v1.keras"
-OUT_PATH = "serving_app/models/thresholds.json"
+MODEL_PATH = MODEL_DIR / "fraud_v1.keras"
+OUT_PATH = MODEL_DIR / "thresholds.json"
 
 ALERT_CAP = 0.06
 WINDOW_SIZE = 1000
@@ -76,8 +78,8 @@ def amount_won(scaled_amount, scaler):
 
 def main():
     model = keras.models.load_model(MODEL_PATH)
-    scaler = FraudScaler.load()
-    valid = np.load("data/processed/valid.npz")
+    scaler = FraudScaler.load(MODEL_DIR / "scaler.pkl")
+    valid = np.load(DATA_DIR / "processed/valid.npz")
     X, y, dates = valid["X"], valid["y"], valid["dates"]
     scores = model.predict(X, batch_size=4096, verbose=0).flatten()
 
@@ -92,8 +94,8 @@ def main():
     precision_stats = summarize([w["precision"] for w in windows])
     recall_stats = summarize([w["recall"] for w in windows])
 
-    train_last = np.load("data/processed/train.npz")["X"][:, -1, :]
-    train_y = np.load("data/processed/train.npz")["y"]
+    train = np.load(DATA_DIR / "processed/train.npz")
+    train_last, train_y = train["X"][:, -1, :], train["y"]
     feature_refs = {f: psi_reference(train_last[:, FEATURES.index(f)]) for f in PSI_FEATURES}
     score_ref = psi_reference(scores)
     last = X[:, -1, :]

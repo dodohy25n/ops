@@ -40,7 +40,7 @@ FEATURES = [
 N_FEATURES = len(FEATURES)
 
 
-def load_transactions(pattern: str = "data/raw/*/*.csv") -> pd.DataFrame:
+def load_transactions(pattern: str) -> pd.DataFrame:
     """CSV를 모두 읽어 합치고, 카드별 시간순으로 정렬합니다.
 
     AI Hub의 Training/Validation은 같은 기간에서 무작위로 나뉘어 있어서
@@ -105,7 +105,7 @@ def encode(df: pd.DataFrame) -> pd.DataFrame:
 class FraudScaler:
     """피처마다 학습 기간의 최솟값과 최댓값으로 [0, 1] 범위에 맞추는 min-max 스케일러입니다.
 
-    학습 기간 데이터로 한 번만 fit하고 serving_app/models/scaler.pkl에 저장합니다.
+    학습 기간 데이터로 한 번만 fit하고 backend/serving_app/models/scaler.pkl에 저장합니다.
     fine-tuning 때 다시 fit하면 같은 금액이 다른 숫자로 들어가 기존 가중치와 어긋나므로
     서빙과 재학습 모두 저장된 스케일러를 그대로 씁니다.
     """
@@ -124,12 +124,12 @@ class FraudScaler:
         scaled = (encoded.to_numpy(dtype="float32") - self.lo) / span
         return np.clip(scaled, 0.0, 1.0).astype("float32")
 
-    def save(self, path: str = "serving_app/models/scaler.pkl"):
+    def save(self, path):
         with open(path, "wb") as f:
             pickle.dump({"lo": self.lo, "hi": self.hi, "features": FEATURES}, f)
 
     @classmethod
-    def load(cls, path: str = "serving_app/models/scaler.pkl") -> "FraudScaler":
+    def load(cls, path) -> "FraudScaler":
         with open(path, "rb") as f:
             state = pickle.load(f)
         if state["features"] != FEATURES:

@@ -24,7 +24,7 @@ def sample_rows():
 
 
 if __name__ == "__main__":
-    path = Path(__file__).resolve().parents[1] / "data/sample_card_transactions.csv"
+    path = Path(__file__).resolve().parents[2] / "data/sample_card_transactions.csv"
     with path.open("w", encoding="utf-8-sig", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=REQUIRED_COLUMNS, lineterminator="\n")
         writer.writeheader()

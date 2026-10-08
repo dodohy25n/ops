@@ -5,7 +5,7 @@
 β마다 자기 기준으로는 항상 최고점이 나오기 때문입니다. 그래서 β를 한 단계 올릴 때
 사기를 몇 건 더 잡고, 그 대가로 정상 고객을 몇 명 더 막는지를 비교해 β를 정합니다.
 
-실행: python scripts/compare_beta.py   (train_baseline_v1.py 이후)
+실행(프로젝트 최상위): python backend/scripts/compare_beta.py   (train_baseline_v1.py 이후)
 """
 import json
 import os
@@ -14,18 +14,19 @@ import sys
 import numpy as np
 from tensorflow import keras
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from backend.serving_app.config import DATA_DIR, MODEL_DIR
 from backend.serving_app.monitoring.metrics import f_beta, precision_recall
 
-MODEL_PATH = "serving_app/models/fraud_v1.keras"
-THRESHOLDS_PATH = "serving_app/models/thresholds.json"
+MODEL_PATH = MODEL_DIR / "fraud_v1.keras"
+THRESHOLDS_PATH = MODEL_DIR / "thresholds.json"
 BETAS = [1, 2, 3, 4, 5]
 
 
 def main():
     with open(THRESHOLDS_PATH) as f:
         alert_cap = json.load(f)["gate"]["alert_cap"]
-    valid = np.load("data/processed/valid.npz")
+    valid = np.load(DATA_DIR / "processed/valid.npz")
     X, y = valid["X"], valid["y"]
     scores = keras.models.load_model(MODEL_PATH).predict(X, batch_size=4096, verbose=0).flatten()
 
