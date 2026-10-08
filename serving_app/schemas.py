@@ -1,43 +1,137 @@
-"""
-Day1: FastAPI 요청/응답 Pydantic 스키마.
+"""외부 입력은 기간별 CSV. 내부 모델 입력은 카드별 거래 20건입니다."""
+from datetime import date
+from typing import Literal
 
-LSTM은 한 시점의 값이 아니라 최근 SEQ_LEN(20)거래일의 흐름을 입력받아야 하므로,
-/predict는 단일 행이 아니라 "20거래일치 시퀀스"를 요청 본문으로 받습니다.
-이 검증 로직은 Day2 "데이터/모델 검증" 실습에서 다루는 것과 같은 종류입니다 -
-서빙 시점 입력 검증이 학습 시점 피처(data/features.py)와 어긋나지 않도록
-길이(SEQ_LEN)와 값 범위(gt=0, ge=0)를 스키마 단에서 강제합니다.
-"""
-from pydantic import BaseModel, Field
-
-from data.features import SEQ_LEN
+from pydantic import BaseModel, Field, model_validator
 
 
-class DailyPoint(BaseModel):
-    close: float = Field(..., gt=0, description="해당 거래일 종가")
-    volume: int = Field(..., ge=0, description="해당 거래일 거래량")
+class ErrorResponse(BaseModel):
+    detail: str | dict | list
 
 
-class PredictRequest(BaseModel):
-    sequence: list[DailyPoint] = Field(
-        ...,
-        min_length=SEQ_LEN,
-        max_length=SEQ_LEN,
-        description=f"가장 오래된 날 -> 가장 최근 날 순서의 최근 {SEQ_LEN}거래일 시퀀스",
-    )
+class ModelState(BaseModel):
+    state: Literal["loaded", "unloaded", "unavailable"]
+    source: Literal["local", "mlflow"]
+    version: str | None
+    tau: float | None
+    role: Literal["local_candidate", "champion"] | None
+    error: str | None
+    missing_files: list[str] = Field(default_factory=list)
 
 
-class PredictResponse(BaseModel):
-    predicted_close: float
+class HealthResponse(BaseModel):
+    status: Literal["ok"]
+    model_loaded: bool
+    loading_mode: Literal["lazy", "eager"]
+    model: ModelState
+
+
+class RequestMetrics(BaseModel):
+    request_count: int
+    error_count: int
+    error_rate: float
+    avg_latency_ms: float
+    scope: str
+
+
+class ModelUnavailableDetail(BaseModel):
+    code: Literal["model_unavailable"]
+    message: str
+    model: ModelState
+
+
+class ModelUnavailableResponse(BaseModel):
+    detail: ModelUnavailableDetail
+
+
+class UploadSummary(BaseModel):
+    upload_id: str
+    filename: str
+    created_at: str
+    rows: int
+    cards: int
+    predictable_rows: int
+    excluded_rows: int
+    labelled_rows: int
+    start_date: str
+    end_date: str
+
+
+class DataStatus(BaseModel):
+    exists: bool
+    latest: UploadSummary | None
+
+
+class QualityMetrics(BaseModel):
+    tau: float
+    f2: float | None
+    precision: float | None
+    recall: float | None
+    pr_auc: float | None
+    alert_rate: float
+    samples: int
+    frauds: int
+
+
+class BatchRequest(BaseModel):
+    upload_id: str = Field(..., pattern=r"^[0-9a-f]{32}$", description="/data/upload가 반환한 ID")
+    start_date: date | None = Field(None, description="판정 시작일. 앞선 CSV 행은 이력으로 사용합니다.")
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def check_period(self):
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("시작일은 종료일보다 늦을 수 없습니다.")
+        return self
+
+
+class BatchSummary(BaseModel):
+    analysis_id: str
+    upload_id: str
+    filename: str
+    created_at: str
     model_version: str
+    model_role: str
+    tau: float
+    input_rows: int
+    period_rows: int
+    predictions: int
+    excluded_rows: int
+    alerts: int
+    alert_rate: float
+    labelled_predictions: int
+    metrics: QualityMetrics | None
+    start_date: str
+    end_date: str
+    duration_seconds: float
+    transactions_per_second: float
 
 
-class BatchTestRequest(BaseModel):
-    # Day3 드리프트 시뮬레이션에서 사용 (scripts/simulate_drift.py 참고)
-    # SEQ_LEN + N 개의 연속된 종가를 보내면, 서버가 내부적으로 슬라이딩 윈도우로 잘라
-    # 여러 건을 연속 예측한다. (거래량은 시뮬레이션이므로 고정값을 사용)
-    prices: list[float] = Field(..., min_length=SEQ_LEN + 1)
+class TransactionPrediction(BaseModel):
+    row_number: int
+    card_key: str
+    approval_date: str
+    hour: int
+    approval_seq: str
+    fraud_score: float
+    is_fraud: bool
+    actual: int | None
 
 
-class BatchTestResponse(BaseModel):
-    predictions: list[float]
-    drift_check: dict
+class PredictionPage(BaseModel):
+    analysis_id: str
+    total: int
+    offset: int
+    limit: int
+    items: list[TransactionPrediction]
+
+
+class LogFile(BaseModel):
+    name: str
+    size: int
+
+
+class LogContent(BaseModel):
+    name: str
+    content: str
+    truncated: bool

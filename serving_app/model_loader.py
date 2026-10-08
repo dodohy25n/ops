@@ -3,15 +3,16 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from threading import RLock
 
-import mlflow.tensorflow
 import numpy as np
-from tensorflow import keras
 
 from data.features import FEATURES, N_FEATURES, SEQ_LEN, FraudScaler, sequence_from_rows
-from serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
+from serving_app.config import PROJECT_ROOT
 
 _model_cache = None
+_load_lock = RLock()
+_last_load_error = None
 
 
 class LoadedModel:
@@ -50,6 +51,8 @@ class LoadedModel:
 
 
 def load_run_bundle(client, run_id, model_uri, version):
+    import mlflow.tensorflow
+
     with tempfile.TemporaryDirectory(prefix="fraud-bundle-") as tmp:
         bundle = Path(client.download_artifacts(run_id, "bundle", tmp))
         settings = json.loads((bundle / "settings.json").read_text())
@@ -61,10 +64,14 @@ def load_run_bundle(client, run_id, model_uri, version):
 
 
 def load_registered_version(client, version):
+    from serving_app.registry import MODEL_NAME
+
     return load_run_bundle(client, version.run_id, f"models:/{MODEL_NAME}/{version.version}", version.version)
 
 
 def _load_from_mlflow():
+    from serving_app.registry import active_version, configure_registry
+
     client = configure_registry()
     version = active_version(client)
     if version is None:
@@ -74,6 +81,12 @@ def _load_from_mlflow():
 
 def _load_from_local():
     root = PROJECT_ROOT / "serving_app/models"
+    missing = [p.name for p in (root / "fraud_v1.keras", root / "scaler.pkl", root / "thresholds.json")
+               if not p.is_file()]
+    if missing:
+        raise FileNotFoundError("모델 준비가 필요합니다: " + ", ".join(missing))
+    from tensorflow import keras
+
     settings = json.loads((root / "thresholds.json").read_text())
     model = keras.models.load_model(root / "fraud_v1.keras", compile=False)
     return LoadedModel(model, FraudScaler.load(root / "scaler.pkl"), settings, "v1-local")
@@ -87,10 +100,16 @@ def _load_model():
 
 
 def reload_model():
-    global _model_cache
-    loaded = _load_model()
-    _model_cache = loaded
-    return loaded
+    global _model_cache, _last_load_error
+    with _load_lock:
+        try:
+            loaded = _load_model()
+        except Exception as exc:
+            _last_load_error = str(exc)
+            raise
+        _model_cache = loaded
+        _last_load_error = None
+        return loaded
 
 
 def load_eager():
@@ -98,6 +117,23 @@ def load_eager():
 
 
 def get_model():
-    if _model_cache is None:
-        return reload_model()
-    return _model_cache
+    with _load_lock:
+        if _model_cache is None:
+            return reload_model()
+        return _model_cache
+
+
+def model_state():
+    """상태 조회만으로 모델을 로드하거나 Registry DB를 생성하지 않습니다."""
+    model = _model_cache
+    source = os.getenv("MODEL_SOURCE", "local")
+    if model is not None:
+        role = "local_candidate" if model.version == "v1-local" else "champion"
+        return {"state": "loaded", "source": source, "version": model.version,
+                "tau": model.tau, "role": role, "error": _last_load_error}
+    root = PROJECT_ROOT / "serving_app/models"
+    missing = ([p.name for p in (root / "fraud_v1.keras", root / "scaler.pkl", root / "thresholds.json")
+                if not p.is_file()] if source == "local" else [])
+    return {"state": "unavailable" if missing or _last_load_error else "unloaded",
+            "source": source, "version": None, "tau": None, "role": None,
+            "error": _last_load_error, "missing_files": missing}

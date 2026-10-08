@@ -1,44 +1,34 @@
-"""
-대시보드의 "재학습 로그" 패널용 - MLflow Registry를 조회하는 별도 이력 API 대신,
-monitoring/retrain_trigger.py의 "aiops" 로거가 그대로 기록하는 logs/aiops.log
-파일을 읽기 전용으로 노출한다. 새 학습/승격 로직은 없다 (logging 설정은
-serving_app/main.py에서 앱 시작 시 한 번만 구성한다).
-
-드리프트 감지("[WARN] drift detected") -> 재학습 트리거("[INFO] retrain triggered") ->
-게이트 통과("[OK] new_rmse=...")가 실제로 이 파일에 순서대로 쌓이는지 확인하는 것이
-Day3 실습의 검증 포인트다.
-"""
-import os
+"""서버가 생성한 로그 파일 조회."""
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-router = APIRouter(prefix="/logs")
+from serving_app.config import log_dir
+from serving_app.schemas import ErrorResponse, LogContent, LogFile
 
-LOG_DIR = "logs"
+router = APIRouter(prefix="/logs", tags=["로그"])
 
 
-@router.get("")
+@router.get("", response_model=list[LogFile])
 def list_logs():
-    if not os.path.isdir(LOG_DIR):
+    if not log_dir().exists():
         return []
-    files = []
-    for name in sorted(os.listdir(LOG_DIR)):
-        path = os.path.join(LOG_DIR, name)
-        if os.path.isfile(path):
-            files.append({"name": name, "size": os.path.getsize(path)})
-    return files
+    return [{"name": p.name, "size": p.stat().st_size}
+            for p in sorted(log_dir().iterdir()) if p.is_file() and p.suffix in {".log", ".jsonl"}]
 
 
-@router.get("/{filename}")
+@router.get("/{filename}", response_model=LogContent,
+            responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 def read_log(filename: str):
-    # 경로 조작(디렉토리 탈출) 방지: 순수 파일명만 허용
-    if filename != os.path.basename(filename):
-        raise HTTPException(status_code=400, detail="잘못된 파일명입니다")
-
-    path = os.path.join(LOG_DIR, filename)
-    if not os.path.isfile(path):
-        raise HTTPException(status_code=404, detail="로그 파일을 찾을 수 없습니다")
-
-    with open(path, encoding="utf-8") as f:
-        content = f.read()
-    return {"name": filename, "content": content}
+    if filename != Path(filename).name or Path(filename).suffix not in {".log", ".jsonl"}:
+        raise HTTPException(400, "잘못된 로그 파일명입니다.")
+    directory = log_dir().resolve()
+    path = (directory / filename).resolve()
+    if path.parent != directory or not path.is_file():
+        raise HTTPException(404, "로그 파일을 찾을 수 없습니다.")
+    # 전체 로그 대신 마지막 100KB를 반환합니다.
+    with path.open("rb") as stream:
+        size = path.stat().st_size
+        stream.seek(max(0, size - 100_000))
+        raw = stream.read()
+    return {"name": filename, "content": raw.decode("utf-8", errors="replace"), "truncated": size > 100_000}

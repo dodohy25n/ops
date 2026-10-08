@@ -1,0 +1,1275 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "카드 거래 CSV 배치 분석",
+    "description": "기간별 거래 CSV를 업로드하고 카드별 최근 20건으로 이상거래를 판정합니다.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "서버 상태"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/upload": {
+      "post": {
+        "tags": [
+          "CSV 데이터"
+        ],
+        "summary": "Upload",
+        "operationId": "upload_data_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_data_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSummary"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/uploads": {
+      "get": {
+        "tags": [
+          "CSV 데이터"
+        ],
+        "summary": "Uploads",
+        "operationId": "uploads_data_uploads_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UploadSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Uploads Data Uploads Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/uploads/{upload_id}": {
+      "get": {
+        "tags": [
+          "CSV 데이터"
+        ],
+        "summary": "Uploaded Data",
+        "operationId": "uploaded_data_data_uploads__upload_id__get",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/status": {
+      "get": {
+        "tags": [
+          "CSV 데이터"
+        ],
+        "summary": "Status",
+        "operationId": "status_data_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/batch": {
+      "post": {
+        "tags": [
+          "CSV 배치 분석"
+        ],
+        "summary": "Batch",
+        "operationId": "batch_predict_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelUnavailableResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/results": {
+      "get": {
+        "tags": [
+          "CSV 배치 분석"
+        ],
+        "summary": "Results",
+        "operationId": "results_predict_results_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BatchSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Results Predict Results Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/results/{analysis_id}": {
+      "get": {
+        "tags": [
+          "CSV 배치 분석"
+        ],
+        "summary": "Summary",
+        "operationId": "summary_predict_results__analysis_id__get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/results/{analysis_id}/transactions": {
+      "get": {
+        "tags": [
+          "CSV 배치 분석"
+        ],
+        "summary": "Transactions",
+        "operationId": "transactions_predict_results__analysis_id__transactions_get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/results/{analysis_id}/download": {
+      "get": {
+        "tags": [
+          "CSV 배치 분석"
+        ],
+        "summary": "Download",
+        "operationId": "download_predict_results__analysis_id__download_get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics/summary": {
+      "get": {
+        "tags": [
+          "서버 상태"
+        ],
+        "summary": "Summary",
+        "operationId": "summary_metrics_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "tags": [
+          "로그"
+        ],
+        "summary": "List Logs",
+        "operationId": "list_logs_logs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LogFile"
+                  },
+                  "type": "array",
+                  "title": "Response List Logs Logs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs/{filename}": {
+      "get": {
+        "tags": [
+          "로그"
+        ],
+        "summary": "Read Log",
+        "operationId": "read_log_logs__filename__get",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogContent"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchRequest": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Upload Id",
+            "description": "/data/upload가 반환한 ID"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "판정 시작일. 앞선 CSV 행은 이력으로 사용합니다."
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_id"
+        ],
+        "title": "BatchRequest"
+      },
+      "BatchSummary": {
+        "properties": {
+          "analysis_id": {
+            "type": "string",
+            "title": "Analysis Id"
+          },
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "model_role": {
+            "type": "string",
+            "title": "Model Role"
+          },
+          "tau": {
+            "type": "number",
+            "title": "Tau"
+          },
+          "input_rows": {
+            "type": "integer",
+            "title": "Input Rows"
+          },
+          "period_rows": {
+            "type": "integer",
+            "title": "Period Rows"
+          },
+          "predictions": {
+            "type": "integer",
+            "title": "Predictions"
+          },
+          "excluded_rows": {
+            "type": "integer",
+            "title": "Excluded Rows"
+          },
+          "alerts": {
+            "type": "integer",
+            "title": "Alerts"
+          },
+          "alert_rate": {
+            "type": "number",
+            "title": "Alert Rate"
+          },
+          "labelled_predictions": {
+            "type": "integer",
+            "title": "Labelled Predictions"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "title": "Duration Seconds"
+          },
+          "transactions_per_second": {
+            "type": "number",
+            "title": "Transactions Per Second"
+          }
+        },
+        "type": "object",
+        "required": [
+          "analysis_id",
+          "upload_id",
+          "filename",
+          "created_at",
+          "model_version",
+          "model_role",
+          "tau",
+          "input_rows",
+          "period_rows",
+          "predictions",
+          "excluded_rows",
+          "alerts",
+          "alert_rate",
+          "labelled_predictions",
+          "metrics",
+          "start_date",
+          "end_date",
+          "duration_seconds",
+          "transactions_per_second"
+        ],
+        "title": "BatchSummary"
+      },
+      "Body_upload_data_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_data_upload_post"
+      },
+      "DataStatus": {
+        "properties": {
+          "exists": {
+            "type": "boolean",
+            "title": "Exists"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UploadSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "exists",
+          "latest"
+        ],
+        "title": "DataStatus"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "model_loaded": {
+            "type": "boolean",
+            "title": "Model Loaded"
+          },
+          "loading_mode": {
+            "type": "string",
+            "enum": [
+              "lazy",
+              "eager"
+            ],
+            "title": "Loading Mode"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "model_loaded",
+          "loading_mode",
+          "model"
+        ],
+        "title": "HealthResponse"
+      },
+      "LogContent": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "content",
+          "truncated"
+        ],
+        "title": "LogContent"
+      },
+      "LogFile": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "size"
+        ],
+        "title": "LogFile"
+      },
+      "ModelState": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "loaded",
+              "unloaded",
+              "unavailable"
+            ],
+            "title": "State"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "local",
+              "mlflow"
+            ],
+            "title": "Source"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "tau": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tau"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "local_candidate",
+                  "champion"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "missing_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "source",
+          "version",
+          "tau",
+          "role",
+          "error"
+        ],
+        "title": "ModelState"
+      },
+      "ModelUnavailableDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "model_unavailable",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "model"
+        ],
+        "title": "ModelUnavailableDetail"
+      },
+      "ModelUnavailableResponse": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ModelUnavailableDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ModelUnavailableResponse"
+      },
+      "PredictionPage": {
+        "properties": {
+          "analysis_id": {
+            "type": "string",
+            "title": "Analysis Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionPrediction"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "analysis_id",
+          "total",
+          "offset",
+          "limit",
+          "items"
+        ],
+        "title": "PredictionPage"
+      },
+      "QualityMetrics": {
+        "properties": {
+          "tau": {
+            "type": "number",
+            "title": "Tau"
+          },
+          "f2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "F2"
+          },
+          "precision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision"
+          },
+          "recall": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recall"
+          },
+          "pr_auc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Auc"
+          },
+          "alert_rate": {
+            "type": "number",
+            "title": "Alert Rate"
+          },
+          "samples": {
+            "type": "integer",
+            "title": "Samples"
+          },
+          "frauds": {
+            "type": "integer",
+            "title": "Frauds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tau",
+          "f2",
+          "precision",
+          "recall",
+          "pr_auc",
+          "alert_rate",
+          "samples",
+          "frauds"
+        ],
+        "title": "QualityMetrics"
+      },
+      "RequestMetrics": {
+        "properties": {
+          "request_count": {
+            "type": "integer",
+            "title": "Request Count"
+          },
+          "error_count": {
+            "type": "integer",
+            "title": "Error Count"
+          },
+          "error_rate": {
+            "type": "number",
+            "title": "Error Rate"
+          },
+          "avg_latency_ms": {
+            "type": "number",
+            "title": "Avg Latency Ms"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_count",
+          "error_count",
+          "error_rate",
+          "avg_latency_ms",
+          "scope"
+        ],
+        "title": "RequestMetrics"
+      },
+      "TransactionPrediction": {
+        "properties": {
+          "row_number": {
+            "type": "integer",
+            "title": "Row Number"
+          },
+          "card_key": {
+            "type": "string",
+            "title": "Card Key"
+          },
+          "approval_date": {
+            "type": "string",
+            "title": "Approval Date"
+          },
+          "hour": {
+            "type": "integer",
+            "title": "Hour"
+          },
+          "approval_seq": {
+            "type": "string",
+            "title": "Approval Seq"
+          },
+          "fraud_score": {
+            "type": "number",
+            "title": "Fraud Score"
+          },
+          "is_fraud": {
+            "type": "boolean",
+            "title": "Is Fraud"
+          },
+          "actual": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row_number",
+          "card_key",
+          "approval_date",
+          "hour",
+          "approval_seq",
+          "fraud_score",
+          "is_fraud",
+          "actual"
+        ],
+        "title": "TransactionPrediction"
+      },
+      "UploadSummary": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "cards": {
+            "type": "integer",
+            "title": "Cards"
+          },
+          "predictable_rows": {
+            "type": "integer",
+            "title": "Predictable Rows"
+          },
+          "excluded_rows": {
+            "type": "integer",
+            "title": "Excluded Rows"
+          },
+          "labelled_rows": {
+            "type": "integer",
+            "title": "Labelled Rows"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_id",
+          "filename",
+          "created_at",
+          "rows",
+          "cards",
+          "predictable_rows",
+          "excluded_rows",
+          "labelled_rows",
+          "start_date",
+          "end_date"
+        ],
+        "title": "UploadSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 data/raw/
 data/uploads/
 data/processed/
+data/results/
 mlflow.db
 mlflow.db-*
 mlruns/
@@ -13,3 +14,4 @@ __pycache__/
 *.py[cod]
 .DS_Store
 .env
+*.pdf
