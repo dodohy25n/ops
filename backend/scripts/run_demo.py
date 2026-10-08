@@ -8,6 +8,7 @@ import argparse
 import calendar
 import json
 import time
+import unicodedata
 import urllib.request
 import uuid
 from pathlib import Path
@@ -47,12 +48,28 @@ def fmt(value):
     return "-" if value is None else f"{value:.3f}"
 
 
+def pad(text, width):
+    """한글은 터미널에서 두 칸을 차지하므로 화면 폭 기준으로 채웁니다."""
+    shown = sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+    return text + " " * max(width - shown, 0)
+
+
+def print_summary(api, rows):
+    columns = (("월", 9), ("시나리오", 20), ("모델", 6), ("Recall", 8), ("F2", 7), ("재학습 결과", 0))
+    print("\n[요약] 월별 판정과 재학습 결과")
+    print("  " + "".join(pad(name, width) for name, width in columns))
+    for row in rows:
+        print("  " + "".join(pad(value, width) for value, (_, width) in zip(row, columns)))
+    print(f"\n대시보드: {api}/")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api", default="http://127.0.0.1:8077")
     parser.add_argument("--months", nargs="+", default=list(LABELS))
     parser.add_argument("--timeout", type=int, default=900)
     args = parser.parse_args()
+    rows = []
     for month in args.months:
         path = SCENARIO_DIR / f"2024-{month}.csv"
         uploaded = upload(args.api, path)
@@ -64,6 +81,7 @@ def main():
         windows = mon["windows_closed"]
         below = {k: sum(w["status"][k] == "below" for w in windows) for k in ("precision", "recall")}
         psi = {level: sum(w["psi_level"] == level for w in windows) for level in ("warn", "alert")}
+        outcome = "-"
         print(f"\n[2024-{month}] {LABELS.get(month, '')} | 모델 v{result['model_version']} τ {result['tau']}")
         print(f"  판정 {result['predictions']:,}건 | Recall {fmt(m['recall'])} Precision {fmt(m['precision'])} "
               f"F2 {fmt(m['f2'])} 경보 {m['alert_rate']:.2%}")
@@ -73,6 +91,9 @@ def main():
             print(f"  → 재학습 요청 ({', '.join(mon['retrain_reason'])} 2개 창 연속 미달). 게이트 결과를 기다립니다…")
             retrain = wait_for_retrain(args.api, args.timeout)
             print(f"  → 재학습 결과: {retrain['status']}")
+            outcome = retrain["status"]
+            if retrain.get("candidate_version"):
+                outcome += f" (후보 v{retrain['candidate_version']})"
             if retrain.get("candidate"):
                 c, cur = retrain["candidate"], retrain["current"]
                 print(f"     후보 v{retrain.get('candidate_version')} τ {retrain['tau']}: Recall {c['recall']:.3f} "
@@ -81,6 +102,9 @@ def main():
                 print(f"     실패한 조건: {retrain['failed_checks'] or '없음'} | 구간 {retrain['periods']}")
             if retrain.get("error"):
                 print(f"     오류: {retrain['error']}")
+        rows.append((f"2024-{month}", LABELS.get(month, ""), f"v{result['model_version']}",
+                     fmt(m["recall"]), fmt(m["f2"]), outcome))
+    print_summary(args.api, rows)
 
 
 if __name__ == "__main__":
