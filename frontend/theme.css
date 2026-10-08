@@ -1,0 +1,239 @@
+/* Ops! flat B2B theme
+   기능 ID와 API 연결은 index.html에 그대로 두고 표현만 재정의합니다. */
+:root {
+  --bg:#f2f3f7;
+  --card:#fff;
+  --line:#d8dde7;
+  --line-strong:#b8c1cf;
+  --text:#171d29;
+  --muted:#596477;
+  --faint:#7b8596;
+  --blue:#3867e8;
+  --blue-soft:#edf2ff;
+  --green:#087a57;
+  --green-soft:#e9f5f0;
+  --orange:#9a5a00;
+  --orange-soft:#fff3dc;
+  --red:#bd3545;
+  --red-soft:#fcebed;
+  --shadow:none;
+}
+
+html,body { background:#f2f3f7; }
+body {
+  color:var(--text);
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+  letter-spacing:-.012em;
+}
+
+.topbar {
+  height:74px;
+  padding:0 34px;
+  gap:24px;
+  border-bottom:1px solid #d5dae4;
+  background:#fff;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+.brand {
+  min-width:224px;
+  padding-right:24px;
+  border-right:1px solid #d8dde7;
+}
+.ops-wordmark {
+  display:inline-flex;
+  align-items:baseline;
+  color:#171d29;
+  font-family:Inter,Pretendard,var(--sans);
+  font-size:34px;
+  font-weight:900;
+  line-height:1;
+  letter-spacing:-.075em;
+  white-space:nowrap;
+}
+.ops-bang { margin-left:.08em; color:#3867e8; }
+.brand-sub {
+  margin:2px 0 0 8px;
+  color:#7b8596;
+  font:750 9px/1.2 var(--mono);
+  letter-spacing:.08em;
+}
+.nav { height:74px; gap:2px; }
+.nav-btn {
+  min-height:74px;
+  padding:0 20px;
+  color:#596477;
+  font-size:13px;
+  font-weight:750;
+}
+.nav-btn:hover { color:#171d29; background:#f3f5f9; }
+.nav-btn.active { color:#234fc5; background:#edf2ff; }
+.nav-btn.active::after { left:0; right:0; height:3px; border-radius:0; background:#3867e8; }
+.top-meta,.clock { color:#687386; }
+
+.page { max-width:1480px; padding:38px 40px 68px; }
+.page-heading { margin-bottom:24px; }
+.page-heading h1 {
+  color:#171d29;
+  font-size:36px;
+  font-weight:850;
+  line-height:1.12;
+  letter-spacing:-.05em;
+}
+.page-heading h1::before {
+  content:"OPS! / MODEL OPERATIONS";
+  display:block;
+  margin-bottom:9px;
+  color:#3867e8;
+  font:800 10px/1.2 var(--mono);
+  letter-spacing:.14em;
+}
+.page-heading p { max-width:800px; margin-top:9px; color:#596477; font-size:14px; line-height:1.6; }
+
+.onboarding {
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:28px;
+  align-items:stretch;
+  margin-bottom:20px;
+  padding:22px;
+}
+.onboarding-copy { display:flex; flex-direction:column; justify-content:center; gap:9px; }
+.onboarding-copy strong { color:#171d29; font-size:20px; font-weight:850; letter-spacing:-.035em; }
+.onboarding-copy span { color:#687386; font-size:13px; line-height:1.7; }
+.journey-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.journey-step {
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr);
+  grid-template-rows:1fr auto;
+  gap:5px 12px;
+  min-height:108px;
+  padding:16px;
+  border:1px solid #d3d9e3;
+  border-radius:4px;
+  color:#171d29;
+  text-align:left;
+  background:#f8f9fb;
+}
+.journey-step:hover { border-color:#3867e8; background:#f3f6ff; }
+.journey-step .step-no {
+  grid-row:1/3;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid #b8caf8;
+  border-radius:4px;
+  color:#2b58d0;
+  background:#edf2ff;
+  font:800 15px/1 var(--mono);
+}
+.journey-step span:nth-child(2) { min-width:0; }
+.journey-step strong { display:block; font-size:13px; line-height:1.45; }
+.journey-step small { display:block; margin-top:5px; color:#687386; font-size:11px; line-height:1.45; }
+.journey-step b { grid-column:2; color:#2b58d0; font-size:11px; }
+
+.service-metrics { margin-bottom:20px; }
+.performance-card { margin-bottom:14px; }
+.service-metrics .metric-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.performance-card .metric-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.spark { position:absolute; right:12px; bottom:30px; width:76px; height:34px; opacity:.82; }
+.spark polyline { fill:none; stroke:#6f91f2; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.metric.warn .spark polyline { stroke:#efa846; }
+.metric:has(#metric-requests) .spark polyline { stroke:#fff; }
+
+.card,.metric,.stage,.notice,.field,.result,.btn,.badge,.stat,code {
+  border-radius:4px;
+  box-shadow:none;
+}
+.card { border:1px solid #d3d9e3; background:#fff; }
+.card-pad { padding:22px; }
+.card-head { margin-bottom:17px; }
+.card-head h2 { color:#1c2330; font-size:16px; font-weight:800; letter-spacing:-.025em; }
+.card-head p { color:#687386; line-height:1.55; }
+.group-title {
+  margin:22px 0 10px;
+  color:#394456;
+  font-size:12px;
+  letter-spacing:.01em;
+}
+.group-title:first-of-type { margin-top:0; }
+.grid-main,.stack,.split { gap:14px; }
+
+.metric-grid { gap:10px; }
+.metric { min-height:124px; padding:17px; border:1px solid #d3d9e3; background:#fff; }
+.metric:has(#metric-requests) { color:#fff; border-color:#3867e8; background:#3867e8; }
+.metric:has(#metric-requests) .metric-label,
+.metric:has(#metric-requests) .metric-foot { color:rgba(255,255,255,.78); }
+.metric-label { color:#596477; font-size:11px; font-weight:750; }
+.metric-value { color:#171d29; font-size:27px; font-weight:850; font-variant-numeric:tabular-nums; }
+.metric:has(#metric-requests) .metric-value { color:#fff; }
+.metric-foot { color:#7b8596; line-height:1.35; }
+
+.badge { border:1px solid transparent; padding:5px 8px; font-weight:750; }
+.badge.ok { border-color:#a9d3c4; }
+.badge.warn { border-color:#e0bf84; }
+.badge.err { border-color:#e4aab2; }
+.badge.neutral { border-color:#cbd2dc; }
+.badge.blue { border-color:#b8caf8; }
+
+.btn {
+  min-height:40px;
+  border-radius:4px;
+  padding:9px 14px;
+  font-weight:750;
+  transform:none;
+}
+.btn:hover,.btn:active { transform:none; }
+.btn.primary { border:1px solid #315dd4; color:#fff; background:#3867e8; box-shadow:none; }
+.btn.primary:hover { background:#2e59cf; }
+.btn.secondary { border:1px solid #c7ced9; color:#273142; background:#fff; }
+.btn.secondary:hover { border-color:#9faaba; background:#f6f7f9; }
+
+.pipeline { gap:6px; }
+.stage { padding:11px 6px; border:1px solid #d3d9e3; background:#f8f9fb; }
+.stage:not(:last-child)::after { height:1px; background:#aeb7c4; }
+.stage-icon { width:40px; height:40px; border:1px solid #cbd2dc; border-radius:4px; color:#596477; background:#edf0f4; }
+.stage.done { border-color:#a9d2c3; background:#f0f8f5; }
+.stage.alert { border-color:#dec18f; background:#fff8eb; }
+.stage-title { color:#273142; }
+
+.kv { border-color:#e1e5ec; }
+.kv span:first-child { color:#687386; }
+.notice { border:1px solid #b9c9ee; border-left:4px solid #3867e8; color:#304363; background:#f3f6ff; }
+.notice.error { border-color:#e4aab2; border-left-color:#bd3545; background:#fcebed; }
+.field { border-color:#bcc5d2; border-radius:4px; background:#fff; }
+.stat { border-color:#d3d9e3; border-radius:4px; background:#f8f9fb; }
+.result { border-color:#d3d9e3; border-radius:4px; color:#273142; background:#f8f9fb; }
+th { color:#394456; border-color:#cbd2dc; background:#eef0f4; font-family:var(--sans); font-weight:800; }
+td { border-color:#e2e6ec; font-variant-numeric:tabular-nums; }
+tbody tr:nth-child(even) { background:#fafbfc; }
+tr.clickable:hover td { background:#f3f6fb; }
+code { color:#264fbd; background:#edf2ff; }
+footer { color:#7b8596; }
+
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible {
+  outline:3px solid rgba(56,103,232,.24);
+  outline-offset:3px;
+}
+
+@media (max-width:980px) {
+  .topbar { height:auto; min-height:70px; padding:14px 18px 0; gap:8px; }
+  .brand { min-width:0; padding-right:0; border-right:0; }
+  .brand-sub { display:none; }
+  .nav { order:3; width:100%; height:46px; }
+  .nav-btn { min-height:46px; padding:0 14px; }
+  .page { padding:28px 22px 52px; }
+  .onboarding { grid-template-columns:1fr; gap:16px; }
+  .service-metrics .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .service-metrics .metric:last-child { grid-column:1/-1; }
+}
+
+@media (max-width:560px) {
+  .ops-wordmark { font-size:29px; }
+  .page { padding:22px 14px 44px; }
+  .page-heading h1 { font-size:29px; }
+  .journey-list,.service-metrics .metric-grid,.performance-card .metric-grid { grid-template-columns:1fr; }
+  .service-metrics .metric:last-child { grid-column:auto; }
+  .card-head { display:block; }
+}

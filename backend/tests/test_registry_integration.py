@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -12,6 +13,7 @@ from tensorflow import keras
 from backend.serving_app import model_loader
 from backend.serving_app.registry import MODEL_NAME, PROJECT_ROOT, active_version, configure_registry
 from backend.serving_app.train_and_register import register_baseline, register_candidate
+from backend.tests.fixtures import write_test_scaler
 
 
 def fixture_model(always_alert=False):
@@ -33,13 +35,13 @@ class RegistryIntegrationTests(unittest.TestCase):
         X = np.zeros((1000, 20, 17), dtype="float32")
         X[:40, :, 0] = 1
         settings = json.loads((PROJECT_ROOT / "serving_app/models/thresholds.json").read_text())
-        scaler = PROJECT_ROOT / "serving_app/models/scaler.pkl"
         evaluation = {"name": "synthetic-control-flow-test", "usage": "not a trained v2 result"}
         old_cache = model_loader._model_cache
         try:
             with tempfile.TemporaryDirectory(prefix="fraud-registry-test-") as tmp, patch.dict(
                 os.environ, {"FRAUD_MLFLOW_DIR": tmp, "MODEL_SOURCE": "mlflow"}
             ):
+                scaler = write_test_scaler(Path(tmp) / "scaler.pkl")
                 with self.assertRaises(RuntimeError):
                     register_candidate(fixture_model(), settings, scaler, X, y, evaluation)
                 first = register_baseline(fixture_model(), settings, scaler, X)

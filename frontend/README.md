@@ -1,10 +1,11 @@
-# 카드 이상거래 AIOps 대시보드
+# Ops! 카드 이상거래 AIOps 대시보드
 
 교수님 AIOps 운영 도구의 화면 틀을 가져와, 카드 거래 CSV 배치 분석 구조와 우리 설계 지표에 맞게 다시 만든 대시보드입니다. 백엔드가 이 폴더를 서버 루트(`/`)에서 그대로 서비스합니다.
 
 ## 포함 파일
 
-- `index.html`: Dashboard, Analysis, Datasets, System 화면과 API 호출 코드
+- `index.html`: 홈, 배치 분석, 데이터, 시스템 화면과 API 호출 코드
+- `theme.css`: 네이비·블루·화이트 기반의 평면형 B2B 운영 콘솔 스타일
 - `favicon.ico`: 브라우저 아이콘
 
 ## 지표 구성
@@ -62,7 +63,7 @@
 프로젝트 최상위 폴더에서 백엔드만 실행하면 화면도 함께 열립니다. 실제 모델로 판정하려면 TensorFlow가 설치된 가상환경과 `backend/serving_app/models/`의 `fraud_v1.keras`·`scaler.pkl`·`thresholds.json`이 필요합니다.
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
+python3.11 -m venv .venv && .venv/bin/pip install -r backend/requirements-dev.txt
 .venv/bin/uvicorn backend.serving_app.main:app --port 8077
 ```
 

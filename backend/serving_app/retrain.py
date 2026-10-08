@@ -8,7 +8,9 @@
 """
 import copy
 import logging
+import tempfile
 import time
+from pathlib import Path
 from threading import Lock
 
 import numpy as np
@@ -17,7 +19,7 @@ import pandas as pd
 from data.features import SEQ_LEN, encode, sort_transactions
 from data.storage import load_upload
 from backend.serving_app import model_loader
-from backend.serving_app.config import MODEL_DIR, model_source
+from backend.serving_app.config import model_source
 from backend.serving_app.monitoring import drift_monitor
 from backend.serving_app.monitoring.metrics import best_threshold, evaluate, psi_reference
 
@@ -114,8 +116,14 @@ def run(version):
         evaluation = {"name": f"holdout-{periods['holdout']['start']}-{periods['holdout']['end']}",
                       **periods["holdout"], "periods": periods,
                       "usage": "evaluation only; not fine-tuning or threshold tuning"}
-        result = register_candidate(candidate, settings, MODEL_DIR / "scaler.pkl", X[hold], y[hold],
-                                    evaluation, run_name=f"retrain-from-v{version}")
+        # 운영 모델과 함께 Registry에서 내려받은 스케일러를 그대로 후보 번들에 넣습니다.
+        # 로컬 models/scaler.pkl을 다시 참조하면 새 서버나 컨테이너에서 파일이 없어
+        # 재학습이 조용히 실패할 수 있습니다.
+        with tempfile.TemporaryDirectory(prefix="fraud-retrain-bundle-") as tmp:
+            scaler_path = Path(tmp) / "scaler.pkl"
+            current.scaler.save(scaler_path)
+            result = register_candidate(candidate, settings, scaler_path, X[hold], y[hold],
+                                        evaluation, run_name=f"retrain-from-v{version}")
         outcome = "promoted" if result["promoted"] else "rejected"
         summary = {"status": outcome, "finished_at": time.time(), "candidate_version": result["version"],
                    "tau": tau, "periods": periods, "failed_checks": result["gate"]["failed_checks"],

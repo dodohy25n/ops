@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AIOps · 카드 이상거래 운영 대시보드</title>
+<title>Ops! · 카드 이상거래 AIOps</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico" />
 <style>
   :root {
@@ -100,43 +100,54 @@
   }
   @media (max-width:560px) { .page { padding:15px; } .top-meta .clock { display:none; } .metric-grid { grid-template-columns:1fr; } .page-heading { display:block; } .page-heading .btn { margin-top:12px; } }
 </style>
+<link rel="stylesheet" href="theme.css" />
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><div class="brand-mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-10 2 3h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="brand-title">AIOps</div><div class="brand-sub">Card Fraud Detection · CSV Batch</div></div></div>
+  <div class="brand"><div class="ops-wordmark" role="img" aria-label="Ops!"><span>Ops</span><span class="ops-bang">!</span></div><div class="brand-sub">CARD FRAUD OPERATIONS</div></div>
   <nav class="nav" aria-label="대시보드 메뉴">
-    <button class="nav-btn active" data-tab="dashboard" onclick="openTab('dashboard')">Dashboard</button>
-    <button class="nav-btn" data-tab="analysis" onclick="openTab('analysis')">Analysis</button>
-    <button class="nav-btn" data-tab="datasets" onclick="openTab('datasets')">Datasets</button>
-    <button class="nav-btn" data-tab="system" onclick="openTab('system')">System</button>
+    <button class="nav-btn active" data-tab="dashboard" onclick="openTab('dashboard')">홈</button>
+    <button class="nav-btn" data-tab="analysis" onclick="openTab('analysis')">시뮬레이션</button>
+    <button class="nav-btn" data-tab="datasets" onclick="openTab('datasets')">데이터</button>
+    <button class="nav-btn" data-tab="system" onclick="openTab('system')">시스템</button>
   </nav>
   <div class="top-meta"><span class="clock" id="clock">-</span><span class="badge blue" id="model-source">MODEL_SOURCE 확인 중</span><span class="badge neutral" id="top-health">연결 확인 중</span></div>
 </header>
 
 <main class="page">
   <section class="tab-panel active" id="tab-dashboard">
-    <div class="page-heading"><div><h1>운영 대시보드</h1><p>실행 환경 · 모델 성능 · 데이터 분포를 나눠 감시합니다. 기준값은 현재 모델 버전에 저장된 값을 <code>/health</code>에서 읽습니다.</p></div><button class="btn secondary" onclick="refreshAll()">새로고침</button></div>
-    <div class="card card-pad" style="margin-bottom:16px;">
-      <div class="group-title">실행 환경 <span class="badge neutral">/metrics/summary · 현재 서버 프로세스</span></div>
-      <div class="metric-grid">
-        <article class="card metric"><div class="metric-label">요청 수</div><div class="metric-value" id="metric-requests">-</div><div class="metric-foot">서버 기동 이후 HTTP 요청</div></article>
-        <article class="card metric"><div class="metric-label">평균 API 응답시간</div><div class="metric-value" id="metric-latency">-</div><div class="metric-foot">배치 분석 요청 포함 평균</div></article>
-        <article class="card metric" id="metric-error-card"><div class="metric-label">5xx 오류율</div><div class="metric-value" id="metric-error">-</div><div class="metric-foot" id="metric-error-foot">-</div></article>
-        <article class="card metric"><div class="metric-label">최근 배치 처리량</div><div class="metric-value" id="metric-tps">-</div><div class="metric-foot" id="metric-tps-foot">분석 실행 후 표시</div></article>
+    <div class="page-heading"><div><h1>모델 운영 대시보드</h1><p>서비스 상태, 모델 성능, 재학습 이력을 한 화면에서 확인합니다.</p></div><button class="btn secondary" onclick="refreshAll()">데이터 새로고침</button></div>
+    <div class="onboarding card" aria-label="빠른 업무 시작">
+      <div class="onboarding-copy"><strong>빠른 업무 시작</strong><span>운영 상태 확인에 필요한 주요 작업을 순서대로 정리했습니다.</span></div>
+      <div class="journey-list">
+        <button class="journey-step" onclick="openTab('datasets')"><span class="step-no">1</span><span><strong>분석 데이터 확인</strong><small>현재 어떤 CSV를 사용하는지 확인해요</small></span><b>확인하기 →</b></button>
+        <button class="journey-step" onclick="openTab('analysis')"><span class="step-no">2</span><span><strong>예측 직접 실행</strong><small>카드 거래를 분석해 이상거래를 판정해요</small></span><b>실행하기 →</b></button>
+        <button class="journey-step" onclick="openTab('system')"><span class="step-no">3</span><span><strong>운영 기록 확인</strong><small>문제가 있었는지 로그와 기준을 살펴봐요</small></span><b>살펴보기 →</b></button>
       </div>
-      <div class="group-title">모델 성능 <span class="badge neutral" id="perf-scope">최근 분석 · 정답 있는 판정 기준</span></div>
+    </div>
+    <div class="card card-pad service-metrics">
+      <div class="card-head"><div><h2>서비스 운영 지표</h2><p>현재 서버 프로세스의 API 처리 현황과 최근 분석 속도입니다.</p></div></div>
+      <div class="metric-grid">
+        <article class="card metric"><div class="metric-label">처리한 요청</div><div class="metric-value" id="metric-requests">-</div><svg class="spark" viewBox="0 0 76 34" aria-hidden="true"><polyline id="spark-requests" points="1,27 11,20 21,23 31,11 41,19 51,14 61,18 75,8"/></svg><div class="metric-foot">서버 기동 이후 HTTP 요청</div></article>
+        <article class="card metric"><div class="metric-label">평균 응답 속도</div><div class="metric-value" id="metric-latency">-</div><svg class="spark" viewBox="0 0 76 34" aria-hidden="true"><polyline id="spark-latency" points="1,22 11,17 21,26 31,14 41,19 51,7 61,21 75,16"/></svg><div class="metric-foot">배치 분석을 포함한 API 평균</div></article>
+        <article class="card metric" id="metric-success-card"><div class="metric-label">정상 처리율</div><div class="metric-value" id="metric-success">-</div><svg class="spark" viewBox="0 0 76 34" aria-hidden="true"><polyline id="spark-success" points="1,13 11,13 21,13 31,13 41,13 51,13 61,13 75,13"/></svg><div class="metric-foot" id="metric-success-foot">5xx 오류 기준</div></article>
+        <article class="card metric"><div class="metric-label">최근 배치 처리량</div><div class="metric-value" id="metric-tps">-</div><svg class="spark" viewBox="0 0 76 34" aria-hidden="true"><polyline id="spark-tps" points="1,24 11,8 21,26 31,11 41,23 51,9 61,25 75,14"/></svg><div class="metric-foot" id="metric-tps-foot">분석 실행 후 표시</div></article>
+        <article class="card metric warn"><div class="metric-label">재학습 Recall 기준</div><div class="metric-value" id="metric-retrain-threshold">-</div><svg class="spark" viewBox="0 0 76 34" aria-hidden="true"><polyline id="spark-threshold" points="1,29 14,26 27,22 40,17 53,12 66,8 75,5"/></svg><div class="metric-foot">2개 창 연속 미달 시 재학습</div></article>
+      </div>
+    </div>
+    <div class="card card-pad performance-card">
+      <div class="card-head"><div><h2>최근 모델 성능</h2><p id="perf-scope">최근 분석의 정답이 포함된 판정을 기준으로 계산합니다.</p></div><span class="badge neutral">PSI 운영 감시</span></div>
       <div class="metric-grid">
         <article class="card metric" id="metric-precision-card"><div class="metric-label">Precision</div><div class="metric-value" id="metric-precision">-</div><div class="metric-foot" id="metric-precision-foot">트리거 기준 -</div></article>
         <article class="card metric" id="metric-recall-card"><div class="metric-label">Recall</div><div class="metric-value" id="metric-recall">-</div><div class="metric-foot" id="metric-recall-foot">트리거 기준 -</div></article>
         <article class="card metric"><div class="metric-label">F2</div><div class="metric-value" id="metric-f2">-</div><div class="metric-foot" id="metric-f2-foot">검증 기준선 -</div></article>
         <article class="card metric"><div class="metric-label">경보 비율</div><div class="metric-value" id="metric-alert">-</div><div class="metric-foot" id="metric-alert-foot">검증 기준선 -</div></article>
       </div>
-      <div class="group-title">데이터 분포 <span class="badge neutral">PSI</span></div>
-      <div class="notice" id="psi-notice">아직 닫힌 판정 창이 없습니다.</div>
+      <div class="notice" id="psi-notice" style="margin-top:14px;">아직 닫힌 판정 창이 없습니다.</div>
     </div>
     <div class="grid-main">
       <div class="stack">
-        <div class="card card-pad"><div class="card-head"><div><h2>CSV 배치 분석 파이프라인</h2><p>분석이 끝나면 판정 거래가 1,000건 창으로 감시되고, 성능이 2개 창 연속 떨어지면 재학습과 배포 게이트로 이어집니다.</p></div><span class="badge neutral" id="run-badge">마지막 분석 없음</span></div><div class="pipeline" id="pipeline"></div></div>
+        <div class="card card-pad"><div class="card-head"><div><h2>모델이 업데이트되는 과정</h2><p>배치 분석 후 감시, 재학습, 배포 게이트까지의 진행 상태입니다.</p></div><span class="badge neutral" id="run-badge">마지막 분석 없음</span></div><div class="pipeline" id="pipeline"></div></div>
         <div class="card card-pad"><div class="card-head"><div><h2>운영 감시 · 재학습</h2><p><code>/monitoring/status</code> · 현재 운영 모델이 판정한 거래를 1,000건 창으로 평가합니다. PSI는 알림만, 재학습은 성능 기준으로만 판단합니다.</p></div><span class="badge neutral" id="monitor-badge">기록 없음</span></div><div id="monitor-kv"></div><div class="table-wrap" style="margin-top:10px;"><table><thead><tr><th>창</th><th>거래 기간</th><th>Precision</th><th>Recall</th><th>PSI</th><th>연속 미달 P · R</th></tr></thead><tbody id="window-table"><tr><td colspan="6" class="empty">아직 닫힌 판정 창이 없습니다.</td></tr></tbody></table></div><div id="retrain-events" style="margin-top:12px;"></div></div>
         <div class="card card-pad"><div class="card-head"><div><h2>분석 이력</h2><p><code>/predict/results</code>에 저장된 배치 분석입니다. 행을 누르면 상세 결과를 엽니다.</p></div></div><div class="table-wrap"><table><thead><tr><th>분석 시각</th><th>파일</th><th>판정 기간</th><th>판정</th><th>경보 비율</th><th>Precision</th><th>Recall</th><th>모델 · τ</th></tr></thead><tbody id="history-table"><tr><td colspan="8" class="empty">아직 분석 결과가 없습니다.</td></tr></tbody></table></div></div>
         <div class="card card-pad"><div class="card-head"><div><h2>최근 요청 로그</h2><p><code>logs/requests.jsonl</code>의 마지막 기록입니다.</p></div><button class="btn secondary" onclick="loadLogs()">로그 갱신</button></div><div id="recent-alerts" class="empty">아직 확인된 로그가 없습니다.</div></div>
@@ -195,7 +206,7 @@
     </div>
   </section>
 </main>
-<footer>카드 이상거래 AIOps 대시보드 · FastAPI + MLflow · CSV 배치 분석</footer>
+<footer>Ops! · Card Fraud AIOps · FastAPI + MLflow · CSV Batch</footer>
 
 <script>
 const API_BASE=(()=>{const q=new URLSearchParams(location.search).get("api");if(q)return q.replace(/\/+$/,"");return ["5173","3000"].includes(location.port)?`${location.protocol}//${location.hostname}:8077`:""})();
@@ -203,6 +214,7 @@ const REQUIRED_COLUMNS=["카드KEY","승인일자","승인시간대","승인SEQ"
 const PAGE_SIZE=100;
 const stages=[{title:"CSV 업로드",desc:"기간별 거래",icon:"↧"},{title:"스키마 검증",desc:"컬럼·값·순서",icon:"✓"},{title:"시퀀스 생성",desc:"카드별 20건",icon:"▥"},{title:"이상거래 판정",desc:"점수 ≥ τ",icon:"⌕"},{title:"성능 집계",desc:"Precision·Recall·F2",icon:"◆"},{title:"감시",desc:"PSI · 1,000건 창",icon:"⚠"},{title:"fine-tuning",desc:"트리거 시 재학습",icon:"⚙"},{title:"배포 게이트",desc:"통과 시 교체",icon:"▣"}];
 let uploads=[], results=[], criteria=null, current=null, offset=0, pageItems=[], monitor=null, monitorTimer=null;
+const metricTrends={requests:[],latency:[],success:[],tps:[],threshold:[]};
 
 const $=id=>document.getElementById(id);
 const num=v=>Number(v).toLocaleString("ko-KR");
@@ -211,6 +223,7 @@ const dec=v=>v==null?"-":Number(v).toFixed(4);
 const isoDate=s=>s&&s.length===8?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6)}`:s||"";
 const periodText=s=>s?String(s).replace(/^valid \((.*)\)$/,"검증 $1"):"-";
 const localTime=s=>s?new Date(s).toLocaleString("ko-KR",{dateStyle:"short",timeStyle:"short"}):"-";
+const versionText=v=>{const s=String(v??"-");return s.startsWith("v")?s:`v${s}`;};
 function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
 function setBadge(el,type,text){el.className=`badge ${type}`;el.textContent=text;}
 function showResult(el,data,error=false){el.className=`result show log-view${error?" error":""}`;el.textContent=typeof data==="string"?data:JSON.stringify(data,null,2);}
@@ -218,6 +231,8 @@ function errorText(detail){if(typeof detail==="string")return detail;if(Array.is
 function kvRows(rows){return rows.map(([k,v])=>`<div class="kv"><span>${k}</span><span>${v}</span></div>`).join("")}
 // 트리거 기준 이상이면 ok, 미달이면 warn. 기준이나 값이 없으면 판단하지 않습니다.
 function floorType(value,floor){return value==null||floor==null?"neutral":value<floor?"warn":"ok"}
+function recordMetric(key,value){if(!Number.isFinite(Number(value)))return;const series=metricTrends[key],now=Date.now(),last=series[series.length-1];if(last&&last.value===Number(value)&&now-last.ts<12000)return;series.push({ts:now,value:Number(value)});if(series.length>240)series.shift();drawMetric(key);}
+function drawMetric(key){const line=$("spark-"+key);if(!line)return;const series=metricTrends[key];if(!series.length)return;if(series.length===1){line.setAttribute("points","1,17 75,17");return;}const values=series.map(p=>p.value),lo=Math.min(...values),hi=Math.max(...values),span=hi-lo||1;line.setAttribute("points",series.map((p,i)=>`${1+i*74/(series.length-1)},${30-(p.value-lo)*26/span}`).join(" "));}
 
 async function api(path,options={}){let res;try{res=await fetch(API_BASE+path,options)}catch(e){throw new Error(`서버에 연결할 수 없습니다 (${API_BASE||location.origin})`)}const text=await res.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}if(!res.ok){const err=new Error(errorText(data&&data.detail!==undefined?data.detail:data)||`HTTP ${res.status}`);err.status=res.status;throw err}return data}
 
@@ -228,11 +243,11 @@ function renderCriteria(){const c=criteria;if(!c){$("trigger-kv").innerHTML=$("g
 
 async function loadHealth(){try{const h=await api("/health"),m=h.model;criteria=m.criteria||null;setBadge($("top-health"),"ok","Server Healthy");setBadge($("system-health"),"ok","연결됨");const type=m.state==="loaded"?"ok":m.state==="unloaded"?"neutral":"err";setBadge($("model-health"),type,m.state==="loaded"?"Loaded":m.state==="unloaded"?"첫 분석 대기":"Unavailable");$("model-loaded").textContent=m.state==="loaded"?"메모리에 로드됨":m.state==="unloaded"?"첫 분석 때 로드":"로드 불가";$("model-version").textContent=m.version||"-";$("model-role").innerHTML=m.role==="champion"?'<span class="badge ok">운영 모델 (champion)</span>':m.role==="local"?'<span class="badge neutral">v1 기준 모델 (로컬 파일)</span>':"-";$("model-tau").textContent=m.tau??(criteria?criteria.tau:"-");$("model-baseline").textContent=criteria?`F2 ${dec(criteria.baseline.f2)} · R ${dec(criteria.baseline.recall)}`:"-";$("model-source").textContent=`MODEL_SOURCE=${m.source}`;$("model-source-card").textContent=m.source;$("system-model-source").textContent=m.source;$("loading-mode").textContent=h.loading_mode;$("system-loading-mode").textContent=h.loading_mode;const problems=[];if(m.missing_files&&m.missing_files.length)problems.push(`필요한 파일 없음: ${m.missing_files.join(", ")}`);if(m.error)problems.push(m.error);$("model-error").textContent=problems.join("\n");$("model-error").classList.toggle("hidden",!problems.length);}catch{criteria=null;setBadge($("top-health"),"err","Server Offline");setBadge($("model-health"),"err","Offline");setBadge($("system-health"),"err","연결 실패");}renderCriteria();renderLatest();}
 
-async function loadMetrics(){try{const s=await api("/metrics/summary");$("metric-requests").textContent=num(s.request_count);$("metric-latency").textContent=s.request_count?`${Math.round(s.avg_latency_ms)} ms`:"-";$("metric-error").textContent=s.request_count?pct(s.error_rate):"-";$("metric-error-foot").textContent=`5xx ${num(s.error_count)}건 / 전체 ${num(s.request_count)}건`;$("metric-error-card").classList.toggle("warn",s.error_count>0);}catch{}}
+async function loadMetrics(){try{const s=await api("/metrics/summary"),success=Math.max(0,1-s.error_rate),latest=results[0],tps=latest&&latest.transactions_per_second,threshold=criteria&&criteria.trigger&&criteria.trigger.recall_floor;$("metric-requests").textContent=num(s.request_count);$("metric-latency").textContent=s.request_count?`${Math.round(s.avg_latency_ms)} ms`:"-";$("metric-success").textContent=s.request_count?pct(success):"-";$("metric-success-foot").textContent=`5xx ${num(s.error_count)}건 / 전체 ${num(s.request_count)}건`;$("metric-success-card").classList.toggle("warn",s.error_count>0);$("metric-retrain-threshold").textContent=threshold==null?"-":pct(threshold);recordMetric("requests",s.request_count);recordMetric("latency",s.avg_latency_ms);recordMetric("success",success);recordMetric("tps",tps);recordMetric("threshold",threshold);}catch{}}
 
 function renderLatest(){const r=results[0],m=r&&r.metrics,t=criteria&&criteria.trigger,b=criteria&&criteria.baseline;$("metric-tps").textContent=r?`${num(Math.round(r.transactions_per_second))}건/s`:"-";$("metric-tps-foot").textContent=r?`${num(r.predictions)}건 · ${r.duration_seconds.toFixed(2)}초`:"분석 실행 후 표시";$("metric-precision").textContent=m?pct(m.precision):"-";$("metric-recall").textContent=m?pct(m.recall):"-";$("metric-f2").textContent=m?dec(m.f2):"-";$("metric-alert").textContent=r?pct(r.alert_rate):"-";$("metric-precision-foot").textContent=`트리거 기준 ${t?dec(t.precision_floor):"-"}`;$("metric-recall-foot").textContent=`트리거 기준 ${t?dec(t.recall_floor):"-"}`;$("metric-f2-foot").textContent=`검증 기준선 ${b?dec(b.f2):"-"}`;$("metric-alert-foot").textContent=`검증 기준선 ${b?pct(b.alert_rate):"-"}`;$("metric-precision-card").classList.toggle("warn",floorType(m&&m.precision,t&&t.precision_floor)==="warn");$("metric-recall-card").classList.toggle("warn",floorType(m&&m.recall,t&&t.recall_floor)==="warn");$("perf-scope").textContent=r?(m?`최근 분석 · 정답 있는 ${num(r.labelled_predictions)}건 기준`:"최근 분석 · 정답 없음"):"최근 분석 없음";}
 
-function renderPipeline(){const r=results[0];const states=Array(8).fill("idle"),labels=Array(8).fill("대기");if(r){states.splice(0,5,"done","done","done","done",r.metrics?"done":"alert");labels.splice(0,5,"완료","완료",`${num(r.predictions)}건`,`경보 ${num(r.alerts)}건`,r.metrics?"완료":"정답 없음");}else if(uploads.length){states.splice(0,3,"done","done","done");labels.splice(0,3,"완료","완료",`${num(uploads[0].predictable_rows)}건 가능`);}const st=monitor&&monitor.state,last=lastRetrain();if(st){states[5]=st.windows?"done":"idle";labels[5]=st.windows?`창 ${num(st.windows)}개`:`${num(st.observations)}건 누적`;}const rs=st&&st.retrain&&st.retrain.status;if(rs==="requested"||rs==="running"){states[6]="alert";labels[6]="재학습 중";}else if(last){states[6]="done";labels[6]=`후보 v${last.candidate_version||"-"}`;states[7]=last.type==="retrain_promoted"?"done":"alert";labels[7]=last.type==="retrain_promoted"?"통과 · 교체":last.type==="retrain_rejected"?"미달 · 유지":"실패";}$("pipeline").innerHTML=stages.map((s,i)=>`<div class="stage ${states[i]}"><div class="stage-icon">${s.icon}</div><div class="stage-title">${s.title}</div><div class="stage-desc">${s.desc}</div><div class="stage-status">${escapeHtml(labels[i])}</div></div>`).join("");setBadge($("run-badge"),r?"blue":"neutral",r?`마지막 분석 ${localTime(r.created_at)}`:"마지막 분석 없음");}
+function renderPipeline(){const r=results[0];const states=Array(8).fill("idle"),labels=Array(8).fill("대기");if(r){states.splice(0,5,"done","done","done","done",r.metrics?"done":"alert");labels.splice(0,5,"완료","완료",`${num(r.predictions)}건`,`경보 ${num(r.alerts)}건`,r.metrics?"완료":"정답 없음");}else if(uploads.length){states.splice(0,3,"done","done","done");labels.splice(0,3,"완료","완료",`${num(uploads[0].predictable_rows)}건 가능`);}const st=monitor&&monitor.state,last=lastRetrain();if(st){states[5]=st.windows?"done":"idle";labels[5]=st.windows?`창 ${num(st.windows)}개`:`${num(st.observations)}건 누적`;}const rs=st&&st.retrain&&st.retrain.status;if(rs==="requested"||rs==="running"){states[6]="alert";labels[6]="재학습 중";}else if(last){states[6]="done";labels[6]=`후보 ${versionText(last.candidate_version)}`;states[7]=last.type==="retrain_promoted"?"done":"alert";labels[7]=last.type==="retrain_promoted"?"통과 · 교체":last.type==="retrain_rejected"?"미달 · 유지":"실패";}$("pipeline").innerHTML=stages.map((s,i)=>`<div class="stage ${states[i]}"><div class="stage-icon">${s.icon}</div><div class="stage-title">${s.title}</div><div class="stage-desc">${s.desc}</div><div class="stage-status">${escapeHtml(labels[i])}</div></div>`).join("");setBadge($("run-badge"),r?"blue":"neutral",r?`마지막 분석 ${localTime(r.created_at)}`:"마지막 분석 없음");}
 
 async function loadResults(){try{results=await api("/predict/results")}catch{results=[]}const t=criteria&&criteria.trigger,body=$("history-table");const metricCell=(v,floor)=>v==null?'<span class="badge neutral">정답 없음</span>':`<span class="badge ${floorType(v,floor)}">${pct(v)}</span>`;body.innerHTML=results.length?results.slice(0,12).map((r,i)=>`<tr class="clickable" onclick="openResult(${i})"><td>${escapeHtml(localTime(r.created_at))}</td><td>${escapeHtml(r.filename)}</td><td>${escapeHtml(isoDate(r.start_date))} ~ ${escapeHtml(isoDate(r.end_date))}</td><td>${num(r.predictions)}건</td><td>${pct(r.alert_rate)}</td><td>${metricCell(r.metrics&&r.metrics.precision,t&&t.precision_floor)}</td><td>${metricCell(r.metrics&&r.metrics.recall,t&&t.recall_floor)}</td><td>${escapeHtml(r.model_version)} · ${r.tau}</td></tr>`).join(""):'<tr><td colspan="8" class="empty">아직 분석 결과가 없습니다.</td></tr>';renderLatest();renderPipeline();}
 
@@ -263,11 +278,12 @@ const psiNames={amount_log:"금액",hour:"시간대",overseas:"해외",merchant_
 function psiBadge(l){return l==="alert"?'<span class="badge err">경고</span>':l==="warn"?'<span class="badge warn">주의</span>':'<span class="badge ok">정상</span>';}
 function statusCell(v,s){return s==="insufficient"?'<span class="badge neutral">보류</span>':`<span class="badge ${s==="below"?"warn":"ok"}">${pct(v)}</span>`;}
 function renderMonitoring(){const st=monitor&&monitor.state,w=(monitor&&monitor.windows)||[];if(!st){setBadge($("monitor-badge"),"neutral","기록 없음");$("monitor-kv").innerHTML="";$("retrain-events").innerHTML="";renderPipeline();return;}const rs=st.retrain.status;setBadge($("monitor-badge"),rs==="requested"||rs==="running"?"warn":"blue",rs==="requested"||rs==="running"?"재학습 진행 중":`운영 v${st.model_version} 감시 중`);$("monitor-kv").innerHTML=kvRows([["운영 모델",`v${escapeHtml(st.model_version)}`],["누적 판정",`${num(st.observations)}건 · 창 ${num(st.windows)}개`],["연속 미달",`Precision ${st.consecutive.precision} · Recall ${st.consecutive.recall}`],["재학습",escapeHtml(rs)]]);$("window-table").innerHTML=w.length?w.slice(-10).reverse().map(x=>`<tr${x.retrain_requested?' class="alert-row"':""}><td>${x.window}${x.retrain_requested?' <span class="badge err">재학습 요청</span>':""}</td><td>${escapeHtml(isoDate(x.start))} ~ ${escapeHtml(isoDate(x.end))}</td><td>${statusCell(x.precision,x.status.precision)}</td><td>${statusCell(x.recall,x.status.recall)}</td><td>${psiBadge(x.psi_level)} ${dec(Math.max(...Object.values(x.psi)))}</td><td>${x.consecutive.precision} · ${x.consecutive.recall}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">아직 닫힌 판정 창이 없습니다.</td></tr>';const ev=((monitor&&monitor.events)||[]).filter(e=>!e.type.startsWith("psi")).slice(-6).reverse();$("retrain-events").innerHTML=ev.length?ev.map(e=>{const t=new Date(e.ts*1000).toLocaleString("ko-KR",{dateStyle:"short",timeStyle:"medium"});if(e.type==="retrain_requested")return `<div class="notice" style="margin-top:6px;">${t} · ${e.window}번째 창 · ${escapeHtml((e.reason||[]).join(", "))} 2개 창 연속 미달 → 재학습 요청 (운영 v${escapeHtml(e.model_version)})</div>`;if(e.type==="window_reset")return `<div class="notice" style="margin-top:6px;">${t} · 운영 모델 v${escapeHtml(e.from_version)} → v${escapeHtml(e.to_version)} 교체, 판정 창 초기화</div>`;if(e.type==="retrain_failed")return `<div class="notice error" style="margin-top:6px;">${t} · 재학습 실패: ${escapeHtml(e.error)}</div>`;const c=e.candidate,cur=e.current,ok=e.type==="retrain_promoted";return `<div class="notice${ok?"":" error"}" style="margin-top:6px;">${t} · <strong>후보 v${escapeHtml(e.candidate_version)} ${ok?"게이트 통과 → 운영 교체":"게이트 미달 → 기존 모델 유지"}</strong><br>후보 τ ${e.tau}: Recall ${dec(c.recall)} · F2 ${dec(c.f2)} · 경보 ${pct(c.alert_rate)} / 운영: Recall ${dec(cur.recall)} · F2 ${dec(cur.f2)} · 경보 ${pct(cur.alert_rate)}${ok?"":`<br>실패한 조건: ${e.failed_checks.map(k=>checkNames[k]||k).join(", ")}`}<br>시험 구간 ${escapeHtml(isoDate(e.periods.holdout.start))} ~ ${escapeHtml(isoDate(e.periods.holdout.end))} · ${num(e.periods.holdout.samples)}건 (사기 ${num(e.periods.holdout.frauds)}건)</div>`;}).join(""):"";const lw=w[w.length-1],n=$("psi-notice");if(lw){n.className=`notice${lw.psi_level==="alert"?" error":""}`;n.innerHTML=`최근 창 ${lw.window} (${escapeHtml(isoDate(lw.start))} ~ ${escapeHtml(isoDate(lw.end))}) ${psiBadge(lw.psi_level)} · ${Object.entries(lw.psi).map(([k,v])=>`${psiNames[k]||k} ${v.toFixed(3)}`).join(" · ")}<br>${criteria?`${criteria.psi.warn} 이상 주의 · ${criteria.psi.alert} 이상 경고.`:""} PSI는 알림만 보내고 재학습은 성능 트리거로만 판단합니다.`;}else{n.className="notice";n.textContent="아직 닫힌 판정 창이 없습니다.";}renderPipeline();}
-async function loadMonitoring(){try{monitor=await api("/monitoring/status?limit=50")}catch{monitor=null}renderMonitoring();clearTimeout(monitorTimer);const rs=monitor&&monitor.state&&monitor.state.retrain.status;if(rs==="requested"||rs==="running")monitorTimer=setTimeout(async()=>{await loadHealth();await loadMonitoring();},3000);}
+async function loadMonitoring(){try{monitor=await api("/monitoring/status?limit=50");const v=monitor&&monitor.state&&monitor.state.model_version;if(typeof v==="string"&&v.startsWith("v"))monitor.state.model_version=v.slice(1);}catch{monitor=null}renderMonitoring();clearTimeout(monitorTimer);const rs=monitor&&monitor.state&&monitor.state.retrain.status;if(rs==="requested"||rs==="running")monitorTimer=setTimeout(async()=>{await loadHealth();await loadMonitoring();},3000);}
 async function refreshAll(){await loadHealth();await Promise.all([loadUploads(),loadResults(),loadLogs(),loadMonitoring()]);await loadMetrics();}
 $("system-api").textContent=API_BASE||`${location.origin} (같은 주소)`;
 $("required-columns").innerHTML=REQUIRED_COLUMNS.map(c=>`<code>${c}</code>`).join("");
 renderPipeline();refreshAll();
+setInterval(loadMetrics,15000);
 </script>
 </body>
 </html>

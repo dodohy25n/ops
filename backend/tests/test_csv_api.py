@@ -78,7 +78,11 @@ class CsvApiTests(unittest.TestCase):
         paths = self.client.get("/openapi.json").json()["paths"]
         self.assertIn("/predict/batch", paths)
         self.assertNotIn("/predict", paths)
-        self.assertIn("카드 이상거래 운영 대시보드", self.client.get("/").text)
+        screen = self.client.get("/")
+        self.assertIn("Ops! · 카드 이상거래 AIOps", screen.text)
+        theme = self.client.get("/theme.css")
+        self.assertEqual(theme.status_code, 200)
+        self.assertIn("Ops! flat B2B theme", theme.text)
 
     def test_upload_validation_metadata_and_cp949(self):
         response = self.upload(encoding="cp949")

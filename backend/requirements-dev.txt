@@ -1,0 +1,3 @@
+# API, TensorFlow, MLflow와 FastAPI TestClient까지 포함한 개발/테스트 환경
+-r requirements.txt
+httpx2==2.13.0
