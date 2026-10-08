@@ -1,6 +1,6 @@
 """모델, 스케일러, 판정 기준을 같은 버전에서 함께 불러옵니다."""
 import json
-import os
+import logging
 import tempfile
 from pathlib import Path
 from threading import RLock
@@ -8,7 +8,7 @@ from threading import RLock
 import numpy as np
 
 from data.features import FEATURES, N_FEATURES, SEQ_LEN, FraudScaler, sequence_from_rows
-from backend.serving_app.config import MODEL_DIR
+from backend.serving_app.config import MODEL_DIR, model_source
 
 _model_cache = None
 _load_lock = RLock()
@@ -93,10 +93,7 @@ def _load_from_local():
 
 
 def _load_model():
-    source = os.getenv("MODEL_SOURCE", "local")
-    if source not in {"local", "mlflow"}:
-        raise ValueError("MODEL_SOURCE는 local 또는 mlflow여야 합니다.")
-    return _load_from_mlflow() if source == "mlflow" else _load_from_local()
+    return _load_from_mlflow() if model_source() == "mlflow" else _load_from_local()
 
 
 def reload_model():
@@ -116,10 +113,24 @@ def load_eager():
     return reload_model()
 
 
+def _champion_version():
+    from backend.serving_app.registry import active_version, configure_registry
+
+    version = active_version(configure_registry())
+    return str(version.version) if version is not None else None
+
+
 def get_model():
+    """MLflow 모드에서는 champion이 다른 버전으로 옮겨졌으면 새 버전을 불러옵니다."""
     with _load_lock:
         if _model_cache is None:
             return reload_model()
+        if model_source() == "mlflow":
+            try:
+                if _champion_version() not in {None, _model_cache.version}:
+                    return reload_model()
+            except Exception as exc:
+                logging.getLogger("aiops").warning("champion 교체 확인 실패, 기존 모델 유지: %s", exc)
         return _model_cache
 
 
@@ -150,7 +161,7 @@ def criteria_from(settings):
 def model_state():
     """상태 조회만으로 모델을 로드하거나 Registry DB를 생성하지 않습니다."""
     model = _model_cache
-    source = os.getenv("MODEL_SOURCE", "local")
+    source = model_source()
     if model is not None:
         role = "local" if model.version == "v1-local" else "champion"
         return {"state": "loaded", "source": source, "version": model.version,

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.serving_app import model_loader
-from backend.serving_app.config import frontend_dir, log_dir
+from backend.serving_app.config import frontend_dir, log_dir, model_source
 from backend.serving_app.monitoring.logger import RequestMonitor
 from backend.serving_app.routers import predict
 
@@ -24,8 +24,7 @@ def create_app():
         mode = os.getenv("LOADING_MODE", "lazy")
         if mode not in {"lazy", "eager"}:
             raise ValueError("LOADING_MODE는 lazy 또는 eager여야 합니다.")
-        if os.getenv("MODEL_SOURCE", "local") not in {"local", "mlflow"}:
-            raise ValueError("MODEL_SOURCE는 local 또는 mlflow여야 합니다.")
+        model_source()
         monitor.start(log_dir())
         try:
             if mode == "eager":

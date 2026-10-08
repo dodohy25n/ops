@@ -66,16 +66,18 @@ class RegistryIntegrationTests(unittest.TestCase):
                 second = register_candidate(fixture_model(), newer_settings, scaler, X, y, evaluation)
                 self.assertTrue(second["promoted"])
                 self.assertEqual(second["version"], "3")
-                self.assertEqual(model_loader.get_model().version, "1")
-                reloaded = model_loader.reload_model()
+                # 게이트를 통과해 champion이 옮겨지면 다음 분석부터 서버가 새 버전을 씁니다.
+                reloaded = model_loader.get_model()
                 self.assertEqual(reloaded.version, "3")
                 self.assertEqual(reloaded.tau, 0.6)
                 np.testing.assert_array_equal(reloaded.scaler.lo, cached.scaler.lo)
                 np.testing.assert_array_equal(reloaded.classify(X), y)
+                self.assertIs(model_loader.get_model(), reloaded)
                 with patch.object(model_loader, "_load_model", side_effect=ValueError("damaged bundle")):
                     with self.assertRaises(ValueError):
                         model_loader.reload_model()
-                self.assertIs(model_loader.get_model(), reloaded)
+                    client.set_registered_model_alias(MODEL_NAME, "champion", "1")
+                    self.assertIs(model_loader.get_model(), reloaded)
         finally:
             model_loader._model_cache = old_cache
             configure_registry()

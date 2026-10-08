@@ -8,6 +8,14 @@ MODEL_DIR = PROJECT_ROOT / "serving_app/models"
 DATA_DIR = REPO_ROOT / "data"
 
 
+def model_source():
+    """운영 모델은 MLflow의 champion입니다. local은 등록 전 v1 파일을 직접 읽을 때만 씁니다."""
+    source = os.getenv("MODEL_SOURCE", "mlflow")
+    if source not in {"local", "mlflow"}:
+        raise ValueError("MODEL_SOURCE는 local 또는 mlflow여야 합니다.")
+    return source
+
+
 def frontend_dir():
     return Path(os.getenv("FRAUD_FRONTEND_DIR", str(REPO_ROOT / "frontend"))).resolve()
 
