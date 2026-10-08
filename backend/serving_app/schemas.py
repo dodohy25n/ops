@@ -127,6 +127,35 @@ class BatchRequest(BaseModel):
         return self
 
 
+class WindowBrief(BaseModel):
+    window: int
+    start: str
+    end: str
+    precision: float | None
+    recall: float | None
+    status: dict[str, str]
+    psi_level: str
+
+
+class MonitoringUpdate(BaseModel):
+    """이번 분석으로 누적된 감시 결과. 창은 판정 거래 1,000건 단위로 닫힙니다."""
+    model_version: str
+    added: int
+    skipped_duplicates: int
+    pending: int
+    windows_closed: list[WindowBrief]
+    consecutive: dict[str, int]
+    retrain_requested: bool
+    retrain_reason: list[str]
+    retrain_window: int | None = None
+
+
+class MonitoringStatus(BaseModel):
+    state: dict | None
+    windows: list[dict]
+    events: list[dict]
+
+
 class BatchSummary(BaseModel):
     analysis_id: str
     upload_id: str
@@ -147,6 +176,7 @@ class BatchSummary(BaseModel):
     end_date: str
     duration_seconds: float
     transactions_per_second: float
+    monitoring: MonitoringUpdate | None = None
 
 
 class TransactionPrediction(BaseModel):

@@ -3,7 +3,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from backend.serving_app.routers import data, health, logs, metrics
+from backend.serving_app.routers import data, health, logs, metrics, monitoring
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -43,7 +43,7 @@ def create_app():
     origins = [s.strip() for s in os.getenv("FRAUD_CORS_ORIGINS", DEFAULT_ORIGINS).split(",") if s.strip()]
     app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"],
                        allow_headers=["Content-Type"], expose_headers=["Content-Disposition"])
-    for router in (health.router, data.router, predict.router, metrics.router, logs.router):
+    for router in (health.router, data.router, predict.router, monitoring.router, metrics.router, logs.router):
         app.include_router(router)
     app.mount("/", StaticFiles(directory=frontend_dir(), html=True), name="frontend")
     return app

@@ -1,15 +1,16 @@
-"""기간별 CSV 배치 분석과 결과 조회. 이번 단계에서는 재학습을 실행하지 않습니다."""
+"""기간별 CSV 배치 분석과 결과 조회. 분석 뒤 감시 기록을 누적하고, 필요하면 재학습을 백그라운드로 요청합니다."""
 import logging
 import time
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from fastapi.responses import FileResponse
 
-from data.storage import get_result, list_records, record_path
-from backend.serving_app import model_loader
+from data.storage import get_result, list_records, record_path, write_json
+from backend.serving_app import model_loader, retrain
 from backend.serving_app.batch_service import analyze_batch, prepare_batch
 from backend.serving_app.config import result_dir
+from backend.serving_app.monitoring import drift_monitor
 from backend.serving_app.schemas import (
     BatchRequest, BatchSummary, ErrorResponse, ModelUnavailableResponse, PredictionPage,
 )
@@ -21,7 +22,7 @@ logger = logging.getLogger("aiops")
 @router.post("/batch", response_model=BatchSummary,
              responses={404: {"model": ErrorResponse}, 422: {"model": ErrorResponse},
                         503: {"model": ModelUnavailableResponse}})
-def batch(request: BatchRequest):
+def batch(request: BatchRequest, background: BackgroundTasks):
     started = time.perf_counter()
     try:
         prepared = prepare_batch(request)
@@ -36,9 +37,21 @@ def batch(request: BatchRequest):
         raise HTTPException(503, {"code": "model_unavailable", "message": str(exc),
                                   "model": model_loader.model_state()}) from exc
     try:
-        return analyze_batch(request, prepared, model, started=started)
+        summary, observations = analyze_batch(request, prepared, model, started=started)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    settings = getattr(model, "settings", None) or {}
+    if "trigger" in settings and "psi" in settings:
+        try:
+            summary["monitoring"] = drift_monitor.record(summary, observations, model)
+        except Exception:
+            # 감시 기록이 실패해도 판정 결과는 돌려줍니다.
+            logger.exception("monitoring record failed")
+        else:
+            write_json(result_dir() / f"{summary['analysis_id']}.json", summary)
+            if summary["monitoring"]["retrain_requested"]:
+                background.add_task(retrain.run, model.version)
+    return summary
 
 
 @router.get("/results", response_model=list[BatchSummary])

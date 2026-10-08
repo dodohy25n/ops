@@ -32,6 +32,10 @@ def result_dir():
     return runtime_dir() / "data/results"
 
 
+def monitor_dir():
+    return runtime_dir() / "monitoring"
+
+
 def log_dir():
     return runtime_dir() / "logs"
 

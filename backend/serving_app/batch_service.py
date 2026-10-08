@@ -5,7 +5,7 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 
-from data.features import SEQ_LEN, encode, sort_transactions
+from data.features import FEATURES, SEQ_LEN, encode, sort_transactions
 from data.storage import get_upload, load_upload, timestamp, write_json
 from backend.serving_app.config import result_dir
 from backend.serving_app.monitoring.metrics import evaluate
@@ -42,6 +42,9 @@ def analyze_batch(request, prepared, model, started=None):
     targets = df.iloc[ends].copy()
     targets["fraud_score"] = scores
     targets["is_fraud"] = predicted
+    psi_features = list(getattr(model, "settings", {}).get("psi", {}).get("features", {}))
+    for feature in psi_features:
+        targets[f"psi_{feature}"] = scaled[ends, FEATURES.index(feature)]
     targets["_seq"] = targets["승인SEQ"].astype("int64")
     targets["_hour"] = targets["승인시간대"].astype(int)
     targets = targets.sort_values(["승인일자", "_hour", "_seq", "카드KEY"])
@@ -83,4 +86,16 @@ def analyze_batch(request, prepared, model, started=None):
         "transactions_per_second": round(len(ends) / duration, 2),
     }
     write_json(output.with_suffix(".json"), summary)
-    return summary
+    # 감시 창은 기준값을 측정할 때와 같이 날짜, 카드 순으로 묶습니다. 시간대 순으로 묶으면 창 하나가
+    # 몇 시간치 거래만 담아 시간대 분포가 평소와 달라 보입니다.
+    monitored = targets.sort_values(["승인일자", "카드KEY", "_hour", "_seq"])
+    labels = labels.loc[monitored.index]
+    known = known.loc[monitored.index]
+    observations = pd.DataFrame({
+        "upload_id": request.upload_id, "analysis_id": analysis_id,
+        "card_key": monitored["카드KEY"], "approval_date": monitored["승인일자"], "hour": monitored["_hour"],
+        "approval_seq": monitored["승인SEQ"], "actual": labels.where(known, ""),
+        "score": monitored["fraud_score"], "alert": monitored["is_fraud"],
+        **{f"psi_{f}": monitored[f"psi_{f}"] for f in psi_features},
+    })
+    return summary, observations
