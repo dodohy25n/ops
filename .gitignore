@@ -1,6 +1,7 @@
 data/raw/
 **/data/uploads/
 data/processed/
+data/scenarios/
 **/data/results/
 mlflow.db
 mlflow.db-*

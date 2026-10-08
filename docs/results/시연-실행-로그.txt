@@ -1,0 +1,51 @@
+v1 기준 운영 모델 등록: 버전 1, τ 0.28, 별칭 champion
+WARNING:tensorflow:5 out of the last 15 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x174903380> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 16 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x174903380> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+
+[2024-07] ① 정상 | 모델 v1 τ 0.28
+  판정 40,324건 | Recall 0.910 Precision 0.786 F2 0.883 경보 4.30%
+  닫힌 창 40개 | 기준 미달 창 Precision 0 Recall 10 | PSI 주의 0 경고 0 | 연속 미달 {'precision': 0, 'recall': 0}
+  → 재학습 요청 (recall 2개 창 연속 미달). 게이트 결과를 기다립니다…
+  → 재학습 결과: rejected
+     후보 v2 τ 0.2: Recall 0.923 F2 0.866 경보 3.69%
+     운영 모델: Recall 0.869 F2 0.839 경보 3.28%
+     실패한 조건: ['recall'] | 구간 {'fine_tune': {'start': '20240701', 'end': '20240719', 'samples': 24000, 'frauds': 955}, 'tau': {'start': '20240719', 'end': '20240725', 'samples': 8000, 'frauds': 298}, 'holdout': {'start': '20240725', 'end': '20240731', 'samples': 8000, 'frauds': 222}}
+
+[2024-08] ① 정상 | 모델 v1 τ 0.28
+  판정 39,986건 | Recall 0.952 Precision 0.771 F2 0.910 경보 3.84%
+  닫힌 창 40개 | 기준 미달 창 Precision 1 Recall 0 | PSI 주의 0 경고 0 | 연속 미달 {'precision': 0, 'recall': 0}
+
+[2024-09] ② 명절(금액 1.5배) | 모델 v1 τ 0.28
+  판정 37,458건 | Recall 0.928 Precision 0.735 F2 0.881 경보 4.18%
+  닫힌 창 37개 | 기준 미달 창 Precision 3 Recall 6 | PSI 주의 1 경고 8 | 연속 미달 {'precision': 0, 'recall': 0}
+  → 재학습 요청 (recall 2개 창 연속 미달). 게이트 결과를 기다립니다…
+  → 재학습 결과: rejected
+     후보 v3 τ 0.27: Recall 0.930 F2 0.897 경보 3.79%
+     운영 모델: Recall 0.953 F2 0.908 경보 3.99%
+     실패한 조건: ['recall', 'f2_no_regression'] | 구간 {'fine_tune': {'start': '20240830', 'end': '20240918', 'samples': 24000, 'frauds': 823}, 'tau': {'start': '20240918', 'end': '20240924', 'samples': 8000, 'frauds': 239}, 'holdout': {'start': '20240924', 'end': '20240930', 'samples': 8000, 'frauds': 256}}
+
+[2024-10] ③ 신종 사기 | 모델 v1 τ 0.28
+  판정 39,646건 | Recall 0.787 Precision 0.775 F2 0.785 경보 4.69%
+  닫힌 창 40개 | 기준 미달 창 Precision 2 Recall 29 | PSI 주의 1 경고 0 | 연속 미달 {'precision': 0, 'recall': 0}
+  → 재학습 요청 (recall 2개 창 연속 미달). 게이트 결과를 기다립니다…
+  → 재학습 결과: promoted
+     후보 v4 τ 0.16: Recall 0.953 F2 0.903 경보 5.45%
+     운영 모델: Recall 0.845 F2 0.829 경보 4.67%
+     실패한 조건: 없음 | 구간 {'fine_tune': {'start': '20240930', 'end': '20241019', 'samples': 24000, 'frauds': 1094}, 'tau': {'start': '20241019', 'end': '20241025', 'samples': 8000, 'frauds': 402}, 'holdout': {'start': '20241025', 'end': '20241031', 'samples': 8000, 'frauds': 341}}
+
+[2024-11] ③ 신종 사기 | 모델 v4 τ 0.16
+  판정 36,629건 | Recall 0.964 Precision 0.789 F2 0.923 경보 4.31%
+  닫힌 창 36개 | 기준 미달 창 Precision 1 Recall 1 | PSI 주의 0 경고 0 | 연속 미달 {'precision': 0, 'recall': 0}
+
+[2024-12] ③ 신종 사기 | 모델 v4 τ 0.16
+  판정 38,806건 | Recall 0.958 Precision 0.775 F2 0.915 경보 4.75%
+  닫힌 창 39개 | 기준 미달 창 Precision 1 Recall 2 | PSI 주의 1 경고 0 | 연속 미달 {'precision': 1, 'recall': 0}
+
+최종 이벤트:
+  retrain_requested {'window': 34, 'reason': ['recall']}
+  retrain_rejected {'from_version': '1', 'failed_checks': ['recall']}
+  retrain_requested {'window': 95, 'reason': ['recall']}
+  retrain_rejected {'from_version': '1', 'failed_checks': ['recall', 'f2_no_regression']}
+  retrain_requested {'window': 120, 'reason': ['recall']}
+  retrain_promoted {'from_version': '1', 'failed_checks': []}
+  window_reset {'from_version': '1', 'to_version': '4'}
