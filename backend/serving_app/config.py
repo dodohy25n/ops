@@ -5,6 +5,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def frontend_dir():
+    return Path(os.getenv("FRAUD_FRONTEND_DIR", str(PROJECT_ROOT.parent / "frontend"))).resolve()
+
+
 def runtime_dir():
     return Path(os.getenv("FRAUD_API_DIR", str(PROJECT_ROOT))).resolve()
 

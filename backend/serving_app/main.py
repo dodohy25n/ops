@@ -1,4 +1,4 @@
-"""카드 거래 CSV 배치 서버. 실행: uvicorn serving_app.main:app --port 8077"""
+"""카드 거래 CSV 배치 서버. 프로젝트 최상위에서 실행: uvicorn backend.serving_app.main:app --port 8077"""
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.serving_app import model_loader
-from backend.serving_app.config import PROJECT_ROOT, log_dir
+from backend.serving_app.config import frontend_dir, log_dir
 from backend.serving_app.monitoring.logger import RequestMonitor
 from backend.serving_app.routers import predict
 
@@ -46,7 +46,7 @@ def create_app():
                        allow_headers=["Content-Type"], expose_headers=["Content-Disposition"])
     for router in (health.router, data.router, predict.router, metrics.router, logs.router):
         app.include_router(router)
-    app.mount("/", StaticFiles(directory=PROJECT_ROOT / "serving_app/static", html=True), name="static")
+    app.mount("/", StaticFiles(directory=frontend_dir(), html=True), name="frontend")
     return app
 
 

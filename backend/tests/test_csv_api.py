@@ -78,7 +78,7 @@ class CsvApiTests(unittest.TestCase):
         paths = self.client.get("/openapi.json").json()["paths"]
         self.assertIn("/predict/batch", paths)
         self.assertNotIn("/predict", paths)
-        self.assertIn("카드 거래 CSV 분석", self.client.get("/").text)
+        self.assertIn("카드 이상거래 운영 대시보드", self.client.get("/").text)
 
     def test_upload_validation_metadata_and_cp949(self):
         response = self.upload(encoding="cp949")

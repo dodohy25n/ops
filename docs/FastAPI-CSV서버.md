@@ -1,10 +1,12 @@
 # 카드 거래 CSV 백엔드 서버
 
-기간별 거래 CSV를 업로드하고, 카드별 최근 20건으로 배치 판정하는 FastAPI 서버입니다. 별도 프론트는 REST API를 호출하며, 서버 루트에는 기능 확인용 화면이 있습니다.
+기간별 거래 CSV를 업로드하고, 카드별 최근 20건으로 배치 판정하는 FastAPI 서버입니다. 서버 루트(`/`)는 저장소의 `frontend/` 대시보드를 그대로 서비스하므로, 서버 하나만 띄우면 화면과 API를 함께 사용할 수 있습니다.
 
 프론트 연동용 상세 요청·응답·오류 예시는 [API 명세](API명세.md), 코드에서 내보낸 기계용 스키마는 [OpenAPI JSON](openapi.json)에 있습니다.
 
 ## 빠른 시작: Docker
+
+> 2026-10-08 폴더 구조를 `backend/`·`frontend/`·`data/`로 나눈 뒤 Dockerfile·compose의 경로는 아직 갱신하지 않았습니다. 아래 명령은 구조 변경 전 기준이며 다시 검증해야 합니다.
 
 프로젝트 루트에서 실행합니다.
 
@@ -12,7 +14,7 @@
 docker compose -f serving_app/docker-compose.yml up -d --build
 ```
 
-- 백엔드와 확인 화면: http://localhost:8099/
+- 백엔드와 대시보드: http://localhost:8099/
 - Swagger API 문서: http://localhost:8099/docs
 - 서버·모델 상태: http://localhost:8099/health
 - 종료: `docker compose -f serving_app/docker-compose.yml down`
@@ -29,18 +31,20 @@ docker build -f serving_app/Dockerfile -t card-fraud-api:dev .
 
 ## 로컬 실행
 
+프로젝트 최상위 폴더에서 실행합니다. 실제 모델로 판정하려면 TensorFlow가 포함된 `backend/requirements.txt`를 설치합니다. CSV 검증·저장만 확인할 때는 `backend/requirements-api.txt`로 충분합니다.
+
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-api.txt
-uvicorn serving_app.main:app --host 127.0.0.1 --port 8077
+pip install -r backend/requirements.txt
+uvicorn backend.serving_app.main:app --host 127.0.0.1 --port 8077
 ```
 
-이번 작업에서는 시스템에 설치된 API 패키지를 활용한 `.venv`로 로컬 검증하고, Docker에서는 `requirements-api.txt`를 새로 설치해 기동을 확인했습니다.
+브라우저에서 http://localhost:8077/ 에 접속하면 대시보드가 열립니다. 업로드·결과·로그는 `backend/data/`와 `backend/logs/`에 저장되며 Git에서 제외합니다.
 
 ## 프론트 연결
 
-프론트 API 기본 주소는 Docker 실행 시 `http://localhost:8099`입니다. 로컬 uvicorn은 `http://localhost:8077`을 사용합니다.
+서버가 서비스하는 대시보드는 같은 주소의 API를 호출합니다. 프론트를 따로 띄울 때 API 기본 주소는 Docker 실행 시 `http://localhost:8099`, 로컬 uvicorn은 `http://localhost:8077`입니다.
 
 기본 CORS 허용 주소는 `localhost`와 `127.0.0.1`의 5173·3000 포트입니다. 다른 프론트 주소는 `FRAUD_CORS_ORIGINS`에 쉼표로 구분해 지정합니다. 쿠키 인증은 사용하지 않습니다.
 
