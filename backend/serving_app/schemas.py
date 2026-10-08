@@ -9,6 +9,47 @@ class ErrorResponse(BaseModel):
     detail: str | dict | list
 
 
+class BaselineMetrics(BaseModel):
+    period: str | None
+    f2: float
+    precision: float
+    recall: float
+    pr_auc: float | None
+    alert_rate: float
+    fraud_rate: float | None
+
+
+class GateCriteria(BaseModel):
+    recall_min: float
+    alert_rate_max: float
+    min_samples: int
+    min_frauds: int
+
+
+class TriggerCriteria(BaseModel):
+    window_size: int
+    min_alerts: int
+    min_frauds: int
+    consecutive: int
+    precision_floor: float
+    recall_floor: float
+
+
+class PsiCriteria(BaseModel):
+    warn: float
+    alert: float
+
+
+class ModelCriteria(BaseModel):
+    """모델 버전과 함께 저장된 판정 기준. 배포 게이트는 후보 심사용, 트리거는 운영 감시용입니다."""
+    beta: float
+    tau: float
+    baseline: BaselineMetrics
+    gate: GateCriteria
+    trigger: TriggerCriteria
+    psi: PsiCriteria
+
+
 class ModelState(BaseModel):
     state: Literal["loaded", "unloaded", "unavailable"]
     source: Literal["local", "mlflow"]
@@ -17,6 +58,7 @@ class ModelState(BaseModel):
     role: Literal["local_candidate", "champion"] | None
     error: str | None
     missing_files: list[str] = Field(default_factory=list)
+    criteria: ModelCriteria | None = None
 
 
 class HealthResponse(BaseModel):

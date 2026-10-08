@@ -553,6 +553,70 @@
   },
   "components": {
     "schemas": {
+      "BaselineMetrics": {
+        "properties": {
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "f2": {
+            "type": "number",
+            "title": "F2"
+          },
+          "precision": {
+            "type": "number",
+            "title": "Precision"
+          },
+          "recall": {
+            "type": "number",
+            "title": "Recall"
+          },
+          "pr_auc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Auc"
+          },
+          "alert_rate": {
+            "type": "number",
+            "title": "Alert Rate"
+          },
+          "fraud_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraud Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "f2",
+          "precision",
+          "recall",
+          "pr_auc",
+          "alert_rate",
+          "fraud_rate"
+        ],
+        "title": "BaselineMetrics"
+      },
       "BatchRequest": {
         "properties": {
           "upload_id": {
@@ -765,6 +829,34 @@
         ],
         "title": "ErrorResponse"
       },
+      "GateCriteria": {
+        "properties": {
+          "recall_min": {
+            "type": "number",
+            "title": "Recall Min"
+          },
+          "alert_rate_max": {
+            "type": "number",
+            "title": "Alert Rate Max"
+          },
+          "min_samples": {
+            "type": "integer",
+            "title": "Min Samples"
+          },
+          "min_frauds": {
+            "type": "integer",
+            "title": "Min Frauds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recall_min",
+          "alert_rate_max",
+          "min_samples",
+          "min_frauds"
+        ],
+        "title": "GateCriteria"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -851,6 +943,41 @@
         ],
         "title": "LogFile"
       },
+      "ModelCriteria": {
+        "properties": {
+          "beta": {
+            "type": "number",
+            "title": "Beta"
+          },
+          "tau": {
+            "type": "number",
+            "title": "Tau"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/BaselineMetrics"
+          },
+          "gate": {
+            "$ref": "#/components/schemas/GateCriteria"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/TriggerCriteria"
+          },
+          "psi": {
+            "$ref": "#/components/schemas/PsiCriteria"
+          }
+        },
+        "type": "object",
+        "required": [
+          "beta",
+          "tau",
+          "baseline",
+          "gate",
+          "trigger",
+          "psi"
+        ],
+        "title": "ModelCriteria",
+        "description": "모델 버전과 함께 저장된 판정 기준. 배포 게이트는 후보 심사용, 트리거는 운영 감시용입니다."
+      },
       "ModelState": {
         "properties": {
           "state": {
@@ -924,6 +1051,16 @@
             },
             "type": "array",
             "title": "Missing Files"
+          },
+          "criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1007,6 +1144,24 @@
           "items"
         ],
         "title": "PredictionPage"
+      },
+      "PsiCriteria": {
+        "properties": {
+          "warn": {
+            "type": "number",
+            "title": "Warn"
+          },
+          "alert": {
+            "type": "number",
+            "title": "Alert"
+          }
+        },
+        "type": "object",
+        "required": [
+          "warn",
+          "alert"
+        ],
+        "title": "PsiCriteria"
       },
       "QualityMetrics": {
         "properties": {
@@ -1171,6 +1326,44 @@
           "actual"
         ],
         "title": "TransactionPrediction"
+      },
+      "TriggerCriteria": {
+        "properties": {
+          "window_size": {
+            "type": "integer",
+            "title": "Window Size"
+          },
+          "min_alerts": {
+            "type": "integer",
+            "title": "Min Alerts"
+          },
+          "min_frauds": {
+            "type": "integer",
+            "title": "Min Frauds"
+          },
+          "consecutive": {
+            "type": "integer",
+            "title": "Consecutive"
+          },
+          "precision_floor": {
+            "type": "number",
+            "title": "Precision Floor"
+          },
+          "recall_floor": {
+            "type": "number",
+            "title": "Recall Floor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window_size",
+          "min_alerts",
+          "min_frauds",
+          "consecutive",
+          "precision_floor",
+          "recall_floor"
+        ],
+        "title": "TriggerCriteria"
       },
       "UploadSummary": {
         "properties": {

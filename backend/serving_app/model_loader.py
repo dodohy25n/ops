@@ -123,6 +123,30 @@ def get_model():
         return _model_cache
 
 
+def criteria_from(settings):
+    """thresholds.json·settings.json에서 화면과 감시에 쓰는 기준만 꺼냅니다. 키가 없으면 None입니다."""
+    from backend.serving_app.monitoring.deployment_gate import MIN_FRAUDS, MIN_SAMPLES
+
+    try:
+        valid, gate, trigger, psi = settings["valid"], settings["gate"], settings["trigger"], settings["psi"]
+        return {
+            "beta": settings["beta"], "tau": settings["tau"],
+            "baseline": {"period": settings.get("measured_on"), "f2": valid["f2"],
+                         "precision": valid["precision"], "recall": valid["recall"],
+                         "pr_auc": valid.get("pr_auc"), "alert_rate": valid["alert_rate"],
+                         "fraud_rate": valid.get("fraud_rate")},
+            "gate": {"recall_min": gate["r_min"], "alert_rate_max": gate["alert_cap"],
+                     "min_samples": MIN_SAMPLES, "min_frauds": MIN_FRAUDS},
+            "trigger": {"window_size": trigger["window_size"], "min_alerts": trigger["min_alerts"],
+                        "min_frauds": trigger["min_frauds"], "consecutive": trigger["consecutive"],
+                        "precision_floor": trigger["precision"]["minus_2sigma"],
+                        "recall_floor": trigger["recall"]["minus_2sigma"]},
+            "psi": {"warn": psi["warn"], "alert": psi["alert"]},
+        }
+    except (KeyError, TypeError):
+        return None
+
+
 def model_state():
     """상태 조회만으로 모델을 로드하거나 Registry DB를 생성하지 않습니다."""
     model = _model_cache
@@ -130,10 +154,18 @@ def model_state():
     if model is not None:
         role = "local_candidate" if model.version == "v1-local" else "champion"
         return {"state": "loaded", "source": source, "version": model.version,
-                "tau": model.tau, "role": role, "error": _last_load_error}
+                "tau": model.tau, "role": role, "error": _last_load_error,
+                "criteria": criteria_from(getattr(model, "settings", None))}
     root = PROJECT_ROOT / "serving_app/models"
     missing = ([p.name for p in (root / "fraud_v1.keras", root / "scaler.pkl", root / "thresholds.json")
                 if not p.is_file()] if source == "local" else [])
+    # 로컬 모드는 로딩 전에도 같은 버전의 기준 파일을 읽어 보여줄 수 있습니다.
+    criteria = None
+    if source == "local" and (root / "thresholds.json").is_file():
+        try:
+            criteria = criteria_from(json.loads((root / "thresholds.json").read_text()))
+        except ValueError:
+            criteria = None
     return {"state": "unavailable" if missing or _last_load_error else "unloaded",
             "source": source, "version": None, "tau": None, "role": None,
-            "error": _last_load_error, "missing_files": missing}
+            "error": _last_load_error, "missing_files": missing, "criteria": criteria}

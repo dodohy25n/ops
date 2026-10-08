@@ -52,6 +52,17 @@ GET /health
 | `model.role` | `local_candidate` / `champion` / null | 로컬 후보 또는 게이트 통과 운영 모델 |
 | `model.error` | string 또는 null | 마지막 로딩 오류 |
 | `model.missing_files` | string[] | 로컬 모드에서 확인한 누락 파일 |
+| `model.criteria` | object 또는 null | 모델 버전과 함께 저장된 판정 기준. 로컬 모드는 로딩 전에도 `thresholds.json`에서 읽고, MLflow 모드는 로딩 후 bundle의 `settings.json`에서 읽습니다 |
+
+`model.criteria`는 다음 값을 담습니다. 대시보드는 이 값으로 운영 결과를 비교하므로, 모델이 교체되면 기준도 함께 바뀝니다.
+
+| 필드 | 의미 |
+|---|---|
+| `beta`, `tau` | τ 선택에 쓴 F-beta의 β와 선택된 τ |
+| `baseline` | τ를 고른 검증 구간의 F2·Precision·Recall·PR-AUC·경보 비율·이상거래 비율과 기간 |
+| `gate` | 후보 모델 심사용 배포 게이트: `recall_min`, `alert_rate_max`, `min_samples`, `min_frauds` |
+| `trigger` | 운영 감시용 재학습 트리거: `window_size`, `min_alerts`, `min_frauds`, `consecutive`, `precision_floor`·`recall_floor`(정상 창 평균 − 2σ) |
+| `psi` | PSI 주의·경고 기준 `warn`, `alert` |
 
 `unloaded` 상태는 Registry 모델이 존재한다는 보장이 아닙니다. 실제 로딩 성공 여부는 분석 실행 시 확인합니다. `eager` 모드에서도 로딩 실패 시 상태·업로드 기능은 사용할 수 있습니다.
 

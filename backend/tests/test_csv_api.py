@@ -69,6 +69,11 @@ class CsvApiTests(unittest.TestCase):
     def test_startup_health_swagger_and_screen_without_model(self):
         self.assertEqual(self.client.get("/health").status_code, 200)
         self.assertFalse(self.client.get("/health").json()["model_loaded"])
+        criteria = self.client.get("/health").json()["model"]["criteria"]
+        self.assertEqual((criteria["gate"]["recall_min"], criteria["gate"]["alert_rate_max"]), (0.95, 0.06))
+        self.assertAlmostEqual(criteria["trigger"]["recall_floor"], 0.8632, places=4)
+        self.assertAlmostEqual(criteria["trigger"]["precision_floor"], 0.6290, places=4)
+        self.assertIsNone(model_loader.criteria_from({"tau": 0.5}))
         self.assertEqual(self.client.get("/docs").status_code, 200)
         paths = self.client.get("/openapi.json").json()["paths"]
         self.assertIn("/predict/batch", paths)
