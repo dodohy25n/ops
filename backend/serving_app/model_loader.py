@@ -7,7 +7,7 @@ from threading import RLock
 
 import numpy as np
 
-from data.features import FEATURES, N_FEATURES, SEQ_LEN, FraudScaler, sequence_from_rows
+from data.features import FEATURES, N_FEATURES, SEQ_LEN, FraudScaler
 from backend.serving_app.config import MODEL_DIR, model_source
 
 _model_cache = None
@@ -39,12 +39,6 @@ class LoadedModel:
         if len(scores) != len(X) or not np.isfinite(scores).all() or ((scores < 0) | (scores > 1)).any():
             raise ValueError("모델이 올바른 이상거래 점수를 반환하지 않았습니다.")
         return scores
-
-    def predict_one(self, sequence: list[dict]) -> float:
-        if len(sequence) != SEQ_LEN:
-            raise ValueError(f"거래가 정확히 {SEQ_LEN}건 필요합니다.")
-        X = sequence_from_rows(sequence, self.scaler)[None, ...]
-        return float(self.predict_scores(X)[0])
 
     def classify(self, X):
         return (self.predict_scores(X) >= self.tau).astype(int)

@@ -159,12 +159,6 @@ def build_sequences(df: pd.DataFrame, scaler: FraudScaler, seq_len: int = SEQ_LE
     return X, y, dates, cards[ends]
 
 
-def sequence_from_rows(rows: list[dict], scaler: FraudScaler) -> np.ndarray:
-    """서빙용: 요청으로 들어온 거래 seq_len건을 모델 입력 한 개로 바꿉니다."""
-    df = pd.DataFrame(rows).astype(str)
-    return scaler.transform(encode(df))
-
-
 def time_split(dates: np.ndarray) -> dict:
     """판정 대상 거래의 날짜로 학습, 검증, 운영 구간을 나눕니다.
 
