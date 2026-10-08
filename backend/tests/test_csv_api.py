@@ -85,7 +85,7 @@ class CsvApiTests(unittest.TestCase):
         self.assertEqual(self.client.get("/data/uploads/" + meta["upload_id"]).json(), meta)
 
     def test_bad_values_columns_and_duplicates_are_rejected_before_storage(self):
-        for column, bad in [("통합승인금액", "NaN"), ("승인일자", "20240230"),
+        for column, bad in [("통합승인금액", "NaN"), ("통합승인금액", "-1"), ("카드이용한도금액", "-1"), ("승인일자", "20240230"),
                             ("승인시간대", "24"), ("국내해외여부", "9"), ("승인SEQ", "1.5")]:
             rows = sample_rows()
             rows[0][column] = bad
@@ -96,6 +96,14 @@ class CsvApiTests(unittest.TestCase):
         self.assertEqual(self.upload(rows).status_code, 422)
         self.assertEqual(self.client.post("/data/upload", files={"file": ("x.csv", b"Date,Close\n2024,123\n")}).status_code, 422)
         self.assertEqual(self.client.get("/data/uploads").json(), [])
+
+    def test_zero_amount_and_limit_match_training_data(self):
+        # 운영 데이터에는 한도 0이 약 20%, 승인금액 0과 전월 매출건수 음수가 일부 있고 학습 전처리는 이를 0 이상으로 자릅니다.
+        rows = sample_rows()
+        rows[0]["통합승인금액"] = "0"
+        rows[1]["카드이용한도금액"] = "0"
+        rows[2]["전월_매출건수"] = "-1.0"
+        self.assertEqual(self.upload(rows).status_code, 201)
 
     def test_missing_model_returns_503_and_keeps_upload(self):
         meta = self.upload().json()

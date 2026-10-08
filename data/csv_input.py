@@ -69,7 +69,7 @@ def validate_transactions(df: pd.DataFrame):
         ("승인SEQ", 0, None, True, False),
         ("연령", 0, 120, True, True),
         ("가맹점누적매출금액_구간화", 0, None, True, True),
-        ("전월_매출건수", 0, None, True, True),
+        ("전월_매출건수", None, None, True, True),
         ("전월_매출금액", None, None, False, True),
     ]:
         values = df[column].replace({s: "0" for s in OPTIONAL_ZERO}) if optional else df[column]
@@ -77,8 +77,6 @@ def validate_transactions(df: pd.DataFrame):
         bad = ~np.isfinite(numeric)
         if lo is not None:
             bad |= numeric < lo
-        if column in {"통합승인금액", "카드이용한도금액"}:
-            bad |= numeric <= 0
         if hi is not None:
             bad |= numeric > hi
         if integer:
